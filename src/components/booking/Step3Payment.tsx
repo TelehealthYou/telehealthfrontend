@@ -21,7 +21,8 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
     city: formData.city || "",
     state: formData.state || "",
     zip: formData.zip || "",
-    useHomeAddress: formData.useHomeAddress || false,
+    // Default to true (mailing address same as home address)
+    useHomeAddress: formData.useHomeAddress !== undefined ? formData.useHomeAddress : true,
     subscribeRefills: formData.subscribeRefills || false,
     subscribeFollowUp: formData.subscribeFollowUp || false,
     couponCode: formData.couponCode || "",
@@ -161,20 +162,33 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
   };
 
   const handleNext = () => {
-    updateFormData(paymentInfo);
+    // If using home address for billing, copy home address fields from formData into the payment info before updating
+    if (paymentInfo.useHomeAddress) {
+      const merged = {
+        ...paymentInfo,
+        billingAddress: formData.homeAddress || paymentInfo.billingAddress,
+        city: formData.city || paymentInfo.city,
+        state: formData.state || paymentInfo.state,
+        zip: formData.zip || paymentInfo.zip
+      };
+      updateFormData(merged);
+    } else {
+      updateFormData(paymentInfo);
+    }
     onNext();
   };
 
   const isFormValid = () => {
+    const billingFieldsValid = paymentInfo.billingAddress && paymentInfo.city && paymentInfo.state && paymentInfo.zip;
+    const homeAddressFieldsValid = formData.homeAddress && formData.city && formData.state && formData.zip;
+    const addressValid = paymentInfo.useHomeAddress ? homeAddressFieldsValid : billingFieldsValid;
+
     return (
       paymentInfo.nameOnCard &&
       paymentInfo.cardNumber &&
       paymentInfo.expiration &&
       paymentInfo.cvv &&
-      paymentInfo.billingAddress &&
-      paymentInfo.city &&
-      paymentInfo.state &&
-      paymentInfo.zip &&
+      addressValid &&
       paymentInfo.agreeToTerms &&
       paymentInfo.agreeFollowUp &&
       paymentInfo.certifyAccuracy
@@ -226,7 +240,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 position: 'relative'
               }}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
               <p style={{
@@ -266,7 +280,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 position: 'relative'
               }}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
               <p style={{
@@ -322,24 +336,75 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
       </div>
 
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 46px' }}>
+        {/* Summary Column */}
+        <div style={{ maxWidth: '580px', padding: '20px', borderRadius: '8px' }}>
+          <h3 style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '28px', fontWeight: '700', color: '#1f2937', marginTop: 0 }}>Summary</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', marginLeft: '50px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600 }}>Primary Care</span>
+              <span style={{ fontWeight: 600 }}>$ 50.00</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600 }}>Subscription</span>
+              <span style={{ fontWeight: 600 }}>$ 50.00</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+              <span style={{ fontWeight: 700 }}>Sub Total</span>
+              <span style={{ fontWeight: 700 }}>$ 100.00</span>
+            </div>
+            <div style={{ marginTop: '12px' }}>
+              <label style={{ fontWeight: 600 }}>Discount Code</label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <Input
+                  value={paymentInfo.couponCode}
+                  onChange={(e) => handleChange("couponCode", e.target.value)}
+                  placeholder="WELCOME"
+                  className="h-12"
+                  style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', flex: 1 }}
+                />
+                <button
+                  type="button"
+                  style={{ backgroundColor: '#ffffff', color: '#2B4C9A', padding: '0 24px', fontSize: '16px', fontWeight: '600', borderRadius: '6px', border: '1px solid #2B4C9A', cursor: 'pointer' }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+              <span style={{ fontWeight: 600 }}>Due Total</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ textDecoration: 'line-through', color: '#ef4444' }}>$ 100.00</span>
+                <span style={{ fontWeight: 700, color: '#111827' }}>$ 95.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {/* Payment Form */}
           <div style={{
             padding: '32px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <CreditCard style={{ color: '#2B4C9A' }} size={24} />
-              <h3 style={{ 
-                  fontFamily: 'Open Sans, sans-serif', 
-                  fontSize: '22px', 
-                  fontWeight: '700', 
+
+
+            <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '24px', marginBottom: '32px' }}>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <CreditCard style={{ color: '#2B4C9A' }} size={24} />
+                <h3 style={{
+                  fontFamily: 'Open Sans, sans-serif',
+                  fontSize: '22px',
+                  fontWeight: '700',
                   color: '#1f2937',
                   margin: 0
                 }}>
                   Enter Payment Method
                 </h3>
-            
-              <div style={{ marginTop: '12px' }}>
+              </div>
+
+              {/* Name on Card */}
+              <div style={{ gridColumn: '1 / -1', marginTop: '12px' }}>
                 <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
                   Name as appear on the card
                 </label>
@@ -351,441 +416,413 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                   style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', width: '100%' }}
                 />
               </div>
+
+              {/* Card Number */}
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                  Card Number *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Input
+                    value={paymentInfo.cardNumber}
+                    onChange={(e) => handleChange("cardNumber", e.target.value)}
+                    placeholder="1234 5678 9012 3456"
+                    maxLength={19}
+                    className="h-12"
+                    style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', paddingRight: '180px' }}
+                  />
+                  {/* Payment Card Logos */}
+                  <div style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    pointerEvents: 'none'
+                  }}>
+                    {/* Visa */}
+                    <div style={{
+                      width: '40px',
+                      height: '26px',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #e5e7eb',
+                      padding: '2px'
+                    }}>
+                      <img
+                        src="https://1000logos.net/wp-content/uploads/2017/06/VISA-Logo-2006.png"
+                        alt="Visa"
+                        style={{ height: '14px', width: 'auto', objectFit: 'contain' }}
+                      />
+                    </div>
+                    {/* Mastercard */}
+                    <div style={{
+                      width: '40px',
+                      height: '26px',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #e5e7eb',
+                      padding: '2px'
+                    }}>
+                      <img
+                        src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg"
+                        alt="Mastercard"
+                        style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
+                      />
+                    </div>
+                    {/* American Express */}
+                    <div style={{
+                      width: '40px',
+                      height: '26px',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #e5e7eb',
+                      padding: '2px'
+                    }}>
+                      <img
+                        src="https://1000logos.net/wp-content/uploads/2016/10/American-Express-Color.png"
+                        alt="American Express"
+                        style={{ height: '14px', width: 'auto', objectFit: 'contain' }}
+                      />
+                    </div>
+                    {/* Discover */}
+                    <div style={{
+                      width: '40px',
+                      height: '26px',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #e5e7eb',
+                      padding: '2px'
+                    }}>
+                      <img
+                        src="https://1000logos.net/wp-content/uploads/2021/05/Discover-logo.png"
+                        alt="Discover"
+                        style={{ height: '14px', width: 'auto', objectFit: 'contain' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* If mailing address uses home address but home address is missing, show guidance */}
+              {paymentInfo.useHomeAddress && (!formData.homeAddress || !formData.city || !formData.state || !formData.zip) && (
+                <div style={{ marginTop: '12px' }}>
+                  <p style={{ color: '#ef4444', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', margin: 0 }}>
+                    Home address is required — please complete your Home Address in the Contact Info step or uncheck the box to provide a different billing address.
+                  </p>
+                </div>
+              )}
+
+              {paymentInfo.useHomeAddress && formData.homeAddress && (
+                <div style={{ marginTop: '12px' }}>
+                  <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', margin: 0 }}>
+                    <strong>Home Address:</strong> {formData.homeAddress}, {formData.city}, {formData.state} {formData.zip}
+                  </p>
+                </div>
+              )}
+
+              {/* Expiration */}
+              <div>
+                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                  Expiration Date *
+                </label>
+                <Input
+                  value={paymentInfo.expiration}
+                  onChange={(e) => handleChange("expiration", e.target.value)}
+                  placeholder="MM/YY"
+                  maxLength={5}
+                  className="h-12"
+                  style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
+                />
+              </div>
+
+              {/* CVV */}
+              <div>
+                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                  CVV *
+                </label>
+                <Input
+                  value={paymentInfo.cvv}
+                  onChange={(e) => handleChange("cvv", e.target.value)}
+                  placeholder="123"
+                  maxLength={4}
+                  type="password"
+                  className="h-12"
+                  style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
+                />
+              </div>
             </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '24px', marginBottom: '32px' }}>
-          {/* Summary Column */}
-          <div style={{ backgroundColor: 'rgba(255,255,255,0.9)', padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '28px', fontWeight: '700', color: '#1f2937', marginTop: 0 }}>Summary</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600 }}>Primary Care</span>
-                <span style={{ fontWeight: 600 }}>$ 50.00</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600 }}>Subscription</span>
-                <span style={{ fontWeight: 600 }}>$ 50.00</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                <span style={{ fontWeight: 700 }}>Sub Total</span>
-                <span style={{ fontWeight: 700 }}>$ 100.00</span>
-              </div>
-              <div style={{ marginTop: '12px' }}>
-                <label style={{ fontWeight: 600 }}>Discount Code</label>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <Input
-                    value={paymentInfo.couponCode}
-                    onChange={(e) => handleChange("couponCode", e.target.value)}
-                    placeholder="WELCOME"
-                    className="h-12"
-                    style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    style={{ backgroundColor: '#ffffff', color: '#2B4C9A', padding: '0 24px', fontSize: '16px', fontWeight: '600', borderRadius: '6px', border: '1px solid #2B4C9A', cursor: 'pointer' }}
-                  >
-                    Apply
-                  </button>
+            {/* Billing Address */}
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <h3 style={{
+                  fontFamily: 'Open Sans, sans-serif',
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Billing Address
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={paymentInfo.savePaymentMethod}
+                      onChange={(e) => handleChange("savePaymentMethod", e.target.checked)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
+                    />
+                    <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937' }}>Save and use this payment method for future payments</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={paymentInfo.useHomeAddress}
+                      onChange={(e) => handleChange("useHomeAddress", e.target.checked)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
+                    />
+                    <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#ef4444' }}>Mailing address same as home address (Collapse if address is different)</span>
+                  </label>
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-                <span style={{ fontWeight: 600 }}>Due Total</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ textDecoration: 'line-through', color: '#ef4444' }}>$ 100.00</span>
-                  <span style={{ fontWeight: 700, color: '#111827' }}>$ 95.00</span>
-                </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                {/* Street Address */}
+                {!paymentInfo.useHomeAddress && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                      Street Address *
+                    </label>
+                    <Input
+                      value={paymentInfo.billingAddress}
+                      onChange={(e) => handleChange("billingAddress", e.target.value)}
+                      placeholder="123 Main Street"
+                      className="h-12"
+                      style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
+                    />
+                  </div>
+                )}
+
+                {/* City */}
+                {!paymentInfo.useHomeAddress && (
+                  <div>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                      City *
+                    </label>
+                    <Input
+                      value={paymentInfo.city}
+                      onChange={(e) => handleChange("city", e.target.value)}
+                      placeholder="City"
+                      className="h-12"
+                      style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
+                    />
+                  </div>
+                )}
+
+                {/* State */}
+                {!paymentInfo.useHomeAddress && (
+                  <div>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                      State *
+                    </label>
+                    <Select
+                      options={stateOptions}
+                      value={selectedState}
+                      onChange={handleStateChange}
+                      placeholder="Select a state"
+                      styles={customSelectStyles}
+                      isSearchable={true}
+                    />
+                  </div>
+                )}
+
+                {/* ZIP */}
+                {!paymentInfo.useHomeAddress && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                      ZIP Code *
+                    </label>
+                    <Input
+                      value={paymentInfo.zip}
+                      onChange={(e) => handleChange("zip", e.target.value)}
+                      placeholder="ZIP Code"
+                      maxLength={5}
+                      className="h-12"
+                      style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Subscription Options */}
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
+              <h3 style={{
+                fontFamily: 'Open Sans, sans-serif',
+                fontSize: '20px',
+                fontWeight: '600',
+                color: '#1f2937',
+                marginBottom: '16px'
+              }}>
+                Subscription Options
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={paymentInfo.subscribeRefills}
+                    onChange={(e) => handleChange("subscribeRefills", e.target.checked)}
+                    style={{ marginTop: '2px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>
+                      Subscribe to Prescription Refills
+                    </p>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#6b7280', margin: 0 }}>
+                      Get automatic refills and save 15%
+                    </p>
+                  </div>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={paymentInfo.subscribeFollowUp}
+                    onChange={(e) => handleChange("subscribeFollowUp", e.target.checked)}
+                    style={{ marginTop: '2px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>
+                      Subscribe to Follow-up Appointments
+                    </p>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#6b7280', margin: 0 }}>
+                      Priority scheduling and discounted rates
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Coupon Code moved to Summary */}
+
+            {/* Terms Agreement */}
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={paymentInfo.agreeToTerms}
+                  onChange={(e) => handleChange("agreeToTerms", e.target.checked)}
+                  style={{ marginTop: '2px', width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <div>
+                  <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', margin: 0 }}>
+                    I agree to the{" "}
+                    <a href="#" style={{ color: '#2B4C9A', textDecoration: 'underline' }}>terms and conditions</a>
+                    {" "}and{" "}
+                    <a href="#" style={{ color: '#2B4C9A', textDecoration: 'underline' }}>privacy policy</a>
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
-          {/* Card Number */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-              Card Number *
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Input
-                value={paymentInfo.cardNumber}
-                onChange={(e) => handleChange("cardNumber", e.target.value)}
-                placeholder="1234 5678 9012 3456"
-                maxLength={19}
-                className="h-12"
-                style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', paddingRight: '180px' }}
-              />
-              {/* Payment Card Logos */}
-              <div style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
+
+          {/* Navigation Buttons */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '200px 1fr 200px',
+            alignItems: 'center',
+            paddingTop: '28px',
+            paddingBottom: '48px'
+          }}>
+            {/* Back Button */}
+            <button
+              onClick={onBack}
+              style={{
+                backgroundColor: '#ffffff',
+                color: '#2B4C9A',
+                padding: '10px 30px',
+                fontSize: '18px',
+                fontWeight: '600',
+                fontFamily: 'Open Sans, sans-serif',
+                borderRadius: '8px',
+                border: '2px solid #2B4C9A',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                pointerEvents: 'none'
-              }}>
-                {/* Visa */}
-                <div style={{ 
-                  width: '40px', 
-                  height: '26px', 
-                  backgroundColor: '#ffffff', 
-                  borderRadius: '4px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  border: '1px solid #e5e7eb',
-                  padding: '2px'
-                }}>
-                  <img 
-                    src="https://1000logos.net/wp-content/uploads/2017/06/VISA-Logo-2006.png" 
-                    alt="Visa" 
-                    style={{ height: '14px', width: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-                {/* Mastercard */}
-                <div style={{ 
-                  width: '40px', 
-                  height: '26px', 
-                  backgroundColor: '#ffffff', 
-                  borderRadius: '4px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  border: '1px solid #e5e7eb',
-                  padding: '2px'
-                }}>
-                  <img 
-                    src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" 
-                    alt="Mastercard" 
-                    style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-                {/* American Express */}
-                <div style={{ 
-                  width: '40px', 
-                  height: '26px', 
-                  backgroundColor: '#ffffff', 
-                  borderRadius: '4px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  border: '1px solid #e5e7eb',
-                  padding: '2px'
-                }}>
-                  <img 
-                    src="https://1000logos.net/wp-content/uploads/2016/10/American-Express-Color.png" 
-                    alt="American Express" 
-                    style={{ height: '14px', width: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-                {/* Discover */}
-                <div style={{ 
-                  width: '40px', 
-                  height: '26px', 
-                  backgroundColor: '#ffffff', 
-                  borderRadius: '4px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  border: '1px solid #e5e7eb',
-                  padding: '2px'
-                }}>
-                  <img 
-                    src="https://1000logos.net/wp-content/uploads/2021/05/Discover-logo.png" 
-                    alt="Discover" 
-                    style={{ height: '14px', width: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-              </div>
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              BACK
+            </button>
+
+            {/* Submit Button (center) */}
+            <div></div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={handleNext}
+                disabled={!isFormValid()}
+                style={{
+                  backgroundColor: isFormValid() ? '#2B4C9A' : '#9ca3af',
+                  color: '#ffffff',
+                  padding: '10px 30px',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  fontFamily: 'Open Sans, sans-serif',
+                  borderRadius: '8px',
+                  border: 'none',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  cursor: isFormValid() ? 'pointer' : 'not-allowed',
+                  opacity: isFormValid() ? 1 : 0.5,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  if (isFormValid()) {
+                    e.currentTarget.style.backgroundColor = '#1c3a7a';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (isFormValid()) {
+                    e.currentTarget.style.backgroundColor = '#2B4C9A';
+                  }
+                }}
+              >
+                Submit
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             </div>
+            <div></div>
           </div>
-
-          {/* Expiration */}
-          <div>
-            <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-              Expiration Date *
-            </label>
-            <Input
-              value={paymentInfo.expiration}
-              onChange={(e) => handleChange("expiration", e.target.value)}
-              placeholder="MM/YY"
-              maxLength={5}
-              className="h-12"
-              style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
-            />
-          </div>
-
-          {/* CVV */}
-          <div>
-            <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-              CVV *
-            </label>
-            <Input
-              value={paymentInfo.cvv}
-              onChange={(e) => handleChange("cvv", e.target.value)}
-              placeholder="123"
-              maxLength={4}
-              type="password"
-              className="h-12"
-              style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
-            />
-          </div>
-        </div>
-
-        {/* Billing Address */}
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h3 style={{ 
-              fontFamily: 'Open Sans, sans-serif', 
-              fontSize: '20px', 
-              fontWeight: '600', 
-              color: '#1f2937',
-              margin: 0
-            }}>
-              Billing Address
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={paymentInfo.savePaymentMethod}
-                  onChange={(e) => handleChange("savePaymentMethod", e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
-                />
-                <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937' }}>Save and use this payment method for future payments</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={paymentInfo.useHomeAddress}
-                  onChange={(e) => handleChange("useHomeAddress", e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
-                />
-                <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#ef4444' }}>Mailing address same as home address (Collapse if address is different)</span>
-              </label>
-            </div>
-          </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            {/* Street Address */}
-            {!paymentInfo.useHomeAddress && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-                Street Address *
-              </label>
-              <Input
-                value={paymentInfo.billingAddress}
-                onChange={(e) => handleChange("billingAddress", e.target.value)}
-                placeholder="123 Main Street"
-                className="h-12"
-                style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
-              />
-            </div>
-            )}
-
-            {/* City */}
-            {!paymentInfo.useHomeAddress && (
-            <div>
-              <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-                City *
-              </label>
-              <Input
-                value={paymentInfo.city}
-                onChange={(e) => handleChange("city", e.target.value)}
-                placeholder="City"
-                className="h-12"
-                style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
-              />
-            </div>
-            )}
-
-            {/* State */}
-            {!paymentInfo.useHomeAddress && (
-            <div>
-              <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-                State *
-              </label>
-              <Select
-                options={stateOptions}
-                value={selectedState}
-                onChange={handleStateChange}
-                placeholder="Select a state"
-                styles={customSelectStyles}
-                isSearchable={true}
-              />
-            </div>
-            )}
-
-            {/* ZIP */}
-            {!paymentInfo.useHomeAddress && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-                ZIP Code *
-              </label>
-              <Input
-                value={paymentInfo.zip}
-                onChange={(e) => handleChange("zip", e.target.value)}
-                placeholder="ZIP Code"
-                maxLength={5}
-                className="h-12"
-                style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
-              />
-            </div>
-            )}
-          </div>
-        </div>
-
-        {/* Subscription Options */}
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
-          <h3 style={{ 
-            fontFamily: 'Open Sans, sans-serif', 
-            fontSize: '20px', 
-            fontWeight: '600', 
-            color: '#1f2937',
-            marginBottom: '16px'
-          }}>
-            Subscription Options
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={paymentInfo.subscribeRefills}
-                onChange={(e) => handleChange("subscribeRefills", e.target.checked)}
-                style={{ marginTop: '2px', width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <div>
-                <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>
-                  Subscribe to Prescription Refills
-                </p>
-                <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#6b7280', margin: 0 }}>
-                  Get automatic refills and save 15%
-                </p>
-              </div>
-            </label>
-            
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={paymentInfo.subscribeFollowUp}
-                onChange={(e) => handleChange("subscribeFollowUp", e.target.checked)}
-                style={{ marginTop: '2px', width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <div>
-                <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>
-                  Subscribe to Follow-up Appointments
-                </p>
-                <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#6b7280', margin: 0 }}>
-                  Priority scheduling and discounted rates
-                </p>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        {/* Coupon Code moved to Summary */}
-
-        {/* Terms Agreement */}
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
-          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={paymentInfo.agreeToTerms}
-              onChange={(e) => handleChange("agreeToTerms", e.target.checked)}
-              style={{ marginTop: '2px', width: '18px', height: '18px', cursor: 'pointer' }}
-            />
-            <div>
-              <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', margin: 0 }}>
-                I agree to the{" "}
-                <a href="#" style={{ color: '#2B4C9A', textDecoration: 'underline' }}>terms and conditions</a>
-                {" "}and{" "}
-                <a href="#" style={{ color: '#2B4C9A', textDecoration: 'underline' }}>privacy policy</a>
-              </p>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      {/* Navigation Buttons */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '200px 1fr 200px',
-        alignItems: 'center',
-        paddingTop: '28px',
-        paddingBottom: '48px'
-      }}>
-        {/* Back Button */}
-        <button
-          onClick={onBack}
-          style={{
-            backgroundColor: '#ffffff',
-            color: '#2B4C9A',
-            padding: '10px 30px',
-            fontSize: '18px',
-            fontWeight: '600',
-            fontFamily: 'Open Sans, sans-serif',
-            borderRadius: '8px',
-            border: '2px solid #2B4C9A',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f3f4f6';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#ffffff';
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          BACK
-        </button>
-
-        {/* Submit Button (center) */}
-        <div></div>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <button
-          onClick={handleNext}
-          disabled={!isFormValid()}
-          style={{
-            backgroundColor: isFormValid() ? '#2B4C9A' : '#9ca3af',
-            color: '#ffffff',
-            padding: '10px 30px',
-            fontSize: '18px',
-            fontWeight: '600',
-            fontFamily: 'Open Sans, sans-serif',
-            borderRadius: '8px',
-            border: 'none',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            cursor: isFormValid() ? 'pointer' : 'not-allowed',
-            opacity: isFormValid() ? 1 : 0.5,
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-          onMouseEnter={(e) => {
-            if (isFormValid()) {
-              e.currentTarget.style.backgroundColor = '#1c3a7a';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (isFormValid()) {
-              e.currentTarget.style.backgroundColor = '#2B4C9A';
-            }
-          }}
-        >
-          Submit
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        </div>
-        <div></div>
-      </div>
         </div>
       </div>
     </div>
