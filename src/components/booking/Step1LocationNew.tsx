@@ -328,6 +328,7 @@ export function Step1LocationNew({ onNext, formData, updateFormData }: Step1Loca
       const update = {
         date,
         location,
+        state: location, // Pass state same as location
         service: selectedService,
         timeSlot: selectedTimeSlot,
         doctorId: selectedDoctor

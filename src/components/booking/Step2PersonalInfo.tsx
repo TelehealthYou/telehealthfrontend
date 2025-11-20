@@ -34,29 +34,63 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
   const [absencePopoverOpen, setAbsencePopoverOpen] = useState(false);
   const [returnPopoverOpen, setReturnPopoverOpen] = useState(false);
   
-  // React Select options
+  // React Select options - All US States
   const stateOptions = [
-    { value: 'AL', label: 'Alabama' },
-    { value: 'AK', label: 'Alaska' },
-    { value: 'AZ', label: 'Arizona' },
-    { value: 'AR', label: 'Arkansas' },
-    { value: 'CA', label: 'California' },
-    { value: 'CO', label: 'Colorado' },
-    { value: 'CT', label: 'Connecticut' },
-    { value: 'DE', label: 'Delaware' },
-    { value: 'FL', label: 'Florida' },
-    { value: 'GA', label: 'Georgia' }
+    { value: 'Alabama', label: 'Alabama' },
+    { value: 'Alaska', label: 'Alaska' },
+    { value: 'Arizona', label: 'Arizona' },
+    { value: 'Arkansas', label: 'Arkansas' },
+    { value: 'California', label: 'California' },
+    { value: 'Colorado', label: 'Colorado' },
+    { value: 'Connecticut', label: 'Connecticut' },
+    { value: 'Delaware', label: 'Delaware' },
+    { value: 'Florida', label: 'Florida' },
+    { value: 'Georgia', label: 'Georgia' },
+    { value: 'Hawaii', label: 'Hawaii' },
+    { value: 'Idaho', label: 'Idaho' },
+    { value: 'Illinois', label: 'Illinois' },
+    { value: 'Indiana', label: 'Indiana' },
+    { value: 'Iowa', label: 'Iowa' },
+    { value: 'Kansas', label: 'Kansas' },
+    { value: 'Kentucky', label: 'Kentucky' },
+    { value: 'Louisiana', label: 'Louisiana' },
+    { value: 'Maine', label: 'Maine' },
+    { value: 'Maryland', label: 'Maryland' },
+    { value: 'Massachusetts', label: 'Massachusetts' },
+    { value: 'Michigan', label: 'Michigan' },
+    { value: 'Minnesota', label: 'Minnesota' },
+    { value: 'Mississippi', label: 'Mississippi' },
+    { value: 'Missouri', label: 'Missouri' },
+    { value: 'Montana', label: 'Montana' },
+    { value: 'Nebraska', label: 'Nebraska' },
+    { value: 'Nevada', label: 'Nevada' },
+    { value: 'New Hampshire', label: 'New Hampshire' },
+    { value: 'New Jersey', label: 'New Jersey' },
+    { value: 'New Mexico', label: 'New Mexico' },
+    { value: 'New York', label: 'New York' },
+    { value: 'North Carolina', label: 'North Carolina' },
+    { value: 'North Dakota', label: 'North Dakota' },
+    { value: 'Ohio', label: 'Ohio' },
+    { value: 'Oklahoma', label: 'Oklahoma' },
+    { value: 'Oregon', label: 'Oregon' },
+    { value: 'Pennsylvania', label: 'Pennsylvania' },
+    { value: 'Rhode Island', label: 'Rhode Island' },
+    { value: 'South Carolina', label: 'South Carolina' },
+    { value: 'South Dakota', label: 'South Dakota' },
+    { value: 'Tennessee', label: 'Tennessee' },
+    { value: 'Texas', label: 'Texas' },
+    { value: 'Utah', label: 'Utah' },
+    { value: 'Vermont', label: 'Vermont' },
+    { value: 'Virginia', label: 'Virginia' },
+    { value: 'Washington', label: 'Washington' },
+    { value: 'West Virginia', label: 'West Virginia' },
+    { value: 'Wisconsin', label: 'Wisconsin' },
+    { value: 'Wyoming', label: 'Wyoming' }
   ];
 
-  const specialtyOptions = [
-    { value: 'general', label: 'General Pharmacy' },
-    { value: 'compounding', label: 'Compounding Pharmacy' },
-    { value: 'specialty', label: 'Specialty Pharmacy' },
-    { value: 'clinical', label: 'Clinical Pharmacy' }
-  ];
-
-  const [selectedState, setSelectedState] = useState<any>(null);
-  const [selectedSpecialty, setSelectedSpecialty] = useState<any>(null);
+  const [selectedState, setSelectedState] = useState<any>(
+    formData.state ? { value: formData.state, label: formData.state } : null
+  );
 
   // Custom styles for React Select
   const customSelectStyles = {
@@ -136,7 +170,7 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
   });
 
   const [additionalInfo, setAdditionalInfo] = useState({
-    reasonForVisit: formData.reasonForVisit || "",
+    reasonForVisit: formData.reasonForVisit || formData.service || "",
     absenceSince: formData.absenceSince || "",
     returnOn: formData.returnOn || "",
     pharmacyDetail: formData.pharmacyDetail || "",
@@ -542,19 +576,17 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                 </div>
                 <div>
                   <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>State <span style={{color:'#dc2626'}}>*</span></label>
-                  <Input
-                    name="state"
-                    value={personalInfo.state}
-                    onChange={(e) => handleChange("state", e.target.value)}
-                    placeholder="State"
-                    className="h-10"
-                    disabled={isVerified}
-                    style={{
-                      borderRadius: '6px',
-                      backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
-                      cursor: isVerified ? 'not-allowed' : 'text',
-                      border: `1px solid ${formErrors.state ? '#ef4444' : '#d1d5db'}`
+                  <Select
+                    options={stateOptions}
+                    value={selectedState}
+                    onChange={(option: any) => {
+                      setSelectedState(option);
+                      handleChange("state", option?.value || "");
                     }}
+                    placeholder="Select a state"
+                    styles={customSelectStyles}
+                    isSearchable={true}
+                    isDisabled={isVerified}
                   />
                   {submitAttempted && formErrors.state && (
                     <p style={{ color: '#dc2626', marginTop: '2px', fontSize: '12px' }}>{formErrors.state}</p>
@@ -1453,7 +1485,7 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
             </div>
           )}
 
-          {/* Pharmacy Selection Modal */}
+          {/* Pharmacy Selection Modal - Compact & Elegant */}
           {showPharmacyModal && (
             <div style={{
               position: 'fixed',
@@ -1472,165 +1504,97 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
             }}>
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '32px',
-                maxWidth: '1000px',
+                borderRadius: '16px',
+                padding: '24px',
+                maxWidth: '800px',
                 width: '100%',
-                maxHeight: '85vh',
+                maxHeight: '90vh',
                 display: 'flex',
                 flexDirection: 'column',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+                boxShadow: '0 25px 50px -12px rgba(43, 76, 154, 0.25)',
                 position: 'relative',
-                margin: '0'
+                margin: '0',
+                border: '2px solid #2B4C9A'
               }}>
                 {/* Close Button */}
                 <button
                   onClick={() => setShowPharmacyModal(false)}
                   style={{
                     position: 'absolute',
-                    top: '16px',
-                    right: '16px',
+                    top: '12px',
+                    right: '12px',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#9ca3af',
-                    padding: '4px',
+                    color: '#6b7280',
+                    padding: '6px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '4px',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#1f2937';
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#9ca3af';
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    borderRadius: '6px'
                   }}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                   </svg>
                 </button>
 
-                <h3 style={{ 
-                  fontFamily: 'Open Sans, sans-serif', 
-                  fontSize: '24px', 
-                  fontWeight: '600', 
-                  color: '#1f2937', 
-                  marginBottom: '24px',
-                  marginTop: '0',
-                  flexShrink: 0
-                }}>
-                  Select Pharmacy
-                </h3>
-
-                {/* Search Filters */}
+                {/* Header */}
                 <div style={{ marginBottom: '20px', flexShrink: 0 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '12px' }}>
-                    <Input
-                      placeholder="Phone"
-                      className="h-12"
-                      style={{ 
-                        fontFamily: 'Open Sans, sans-serif',
-                        borderRadius: '8px',
-                        border: '1px solid #d1d5db'
-                      }}
-                    />
-                    <Input
-                      placeholder="Address"
-                      className="h-12"
-                      style={{ 
-                        fontFamily: 'Open Sans, sans-serif',
-                        borderRadius: '8px',
-                        border: '1px solid #d1d5db'
-                      }}
-                    />
-                    <Input
-                      placeholder="Name"
-                      className="h-12"
-                      style={{ 
-                        fontFamily: 'Open Sans, sans-serif',
-                        borderRadius: '8px',
-                        border: '1px solid #d1d5db'
-                      }}
-                    />
-                    <Input
-                      placeholder="City"
-                      className="h-12"
-                      style={{ 
-                        fontFamily: 'Open Sans, sans-serif',
-                        borderRadius: '8px',
-                        border: '1px solid #d1d5db'
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px' }}>
-                    <Select
-                      options={stateOptions}
-                      value={selectedState}
-                      onChange={setSelectedState}
-                      placeholder="Select a state"
-                      styles={customSelectStyles}
-                      isSearchable={true}
-                    />
-                    <Input
-                      placeholder="Zipcode"
-                      className="h-12"
-                      style={{ 
-                        fontFamily: 'Open Sans, sans-serif',
-                        borderRadius: '8px',
-                        border: '1px solid #d1d5db'
-                      }}
-                    />
-                    <Select
-                      options={specialtyOptions}
-                      value={selectedSpecialty}
-                      onChange={setSelectedSpecialty}
-                      placeholder="Select A Specialty"
-                      styles={customSelectStyles}
-                      isSearchable={true}
-                    />
-                    <button
-                      type="button"
-                      style={{
-                        backgroundColor: '#2563eb',
-                        color: '#ffffff',
-                        padding: '0 32px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        fontFamily: 'Open Sans, sans-serif',
-                        borderRadius: '8px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap',
-                        height: '48px'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#1d4ed8';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#2563eb';
-                      }}
-                    >
-                      Search
-                    </button>
-                  </div>
+                  <h3 style={{ 
+                    fontFamily: 'Open Sans, sans-serif', 
+                    fontSize: '22px', 
+                    fontWeight: '700', 
+                    color: '#2B4C9A',
+                    marginTop: '0',
+                    marginBottom: '4px'
+                  }}>
+                    🏥 Select Your Pharmacy
+                  </h3>
+                  <p style={{
+                    fontFamily: 'Open Sans, sans-serif',
+                    fontSize: '13px',
+                    color: '#6b7280',
+                    margin: '0'
+                  }}>
+                    Choose a pharmacy from the list below for prescription delivery
+                  </p>
+                </div>
+
+                {/* Search Bar */}
+                <div style={{ marginBottom: '16px', flexShrink: 0 }}>
+                  <Input
+                    placeholder="Search by name, city, or zip code..."
+                    className="h-10"
+                    style={{ 
+                      fontFamily: 'Open Sans, sans-serif',
+                      borderRadius: '8px',
+                      border: '1px solid #2B4C9A',
+                      fontSize: '14px',
+                      width: '100%'
+                    }}
+                    onChange={(e) => {
+                      const searchTerm = e.target.value.toLowerCase();
+                      const pharmacies = document.querySelectorAll('[data-pharmacy-item]');
+                      pharmacies.forEach((item: any) => {
+                        const text = item.textContent.toLowerCase();
+                        item.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+                      });
+                    }}
+                  />
                 </div>
 
                 {/* Pharmacy List */}
                 <div style={{ 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '12px',
                   overflow: 'hidden',
                   flex: 1,
                   display: 'flex',
                   flexDirection: 'column',
-                  minHeight: 0
+                  minHeight: 0,
+                  backgroundColor: 'rgba(249, 250, 251, 0.5)'
                 }}>
                   <div style={{
                     overflowY: 'auto',
@@ -1638,57 +1602,57 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                     maxHeight: '100%'
                   }}>
                     {[
-                      { name: 'McConaghy Drug Store Inc.', phone: '2516752070', address: '5565 Hwy 43, Satsuma, AL 36572-0488' },
-                      { name: 'LIMESTONE DRUG', phone: '2562323811', address: '200 W MARKET ST, ATHENS, AL 35611' },
-                      { name: 'Propst Discount Drugs', phone: '2565397443', address: '717 Pratt Ave NE, Huntsville, AL 35801-3645' },
-                      { name: 'Boaz Discount Pharmacy', phone: '2565936546', address: '10460 AL Highway 168 Ste 1, Boaz, AL 35957' },
-                      { name: 'Jones Discount Pharmacy', phone: '2565863179', address: '1036 N Brindlee Mountain Pkwy, Arab, AL 35016' },
-                      { name: 'Durham Pharmacy', phone: '2056959611', address: '44984 Hwy 17, Vernon, AL 35592' },
-                      { name: 'Adams Drugs (Downtown)', phone: '3342643496', address: '934 Adams Ave, Montgomery, AL 36104-4422' }
+                      { name: 'HealthPlus Pharmacy', phone: '(212) 555-0123', address: '455 Madison Ave, New York, NY 10022' },
+                      { name: 'CareRx Drugstore', phone: '(310) 555-0198', address: '8920 Wilshire Blvd, Los Angeles, CA 90211' },
+                      { name: 'MediCare Express', phone: '(415) 555-0167', address: '1450 Market St, San Francisco, CA 94102' },
+                      { name: 'WellScript Pharmacy', phone: '(305) 555-0145', address: '2301 Collins Ave, Miami Beach, FL 33139' },
+                      { name: 'RxCare Center', phone: '(312) 555-0189', address: '875 N Michigan Ave, Chicago, IL 60611' },
+                      { name: 'Prime Health Pharmacy', phone: '(617) 555-0134', address: '330 Brookline Ave, Boston, MA 02215' },
+                      { name: 'Vital Care Drugs', phone: '(713) 555-0178', address: '6565 Fannin St, Houston, TX 77030' },
+                      { name: 'Community Health Rx', phone: '(206) 555-0156', address: '1201 3rd Ave, Seattle, WA 98101' },
+                      { name: 'TrueCare Pharmacy', phone: '(404) 555-0192', address: '2401 Peachtree Rd NE, Atlanta, GA 30305' },
+                      { name: 'LifeMed Pharmacy', phone: '(602) 555-0143', address: '755 E McDowell Rd, Phoenix, AZ 85006' }
                     ].map((pharmacy, index) => (
                       <div
                         key={index}
+                        data-pharmacy-item
                         style={{
-                          padding: '16px 20px',
-                          borderBottom: index < 6 ? '1px solid #e5e7eb' : 'none',
+                          padding: '12px 16px',
+                          borderBottom: index < 9 ? '1px solid #e5e7eb' : 'none',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          transition: 'background-color 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f9fafb';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#ffffff';
+                          backgroundColor: 'rgba(255, 255, 255, 0.7)'
                         }}
                       >
-                        <div>
-                          <div style={{ marginBottom: '4px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                             <span style={{
                               fontFamily: 'Open Sans, sans-serif',
-                              fontSize: '16px',
+                              fontSize: '15px',
                               fontWeight: '600',
-                              color: '#f97316',
-                              marginRight: '8px'
+                              color: '#2B4C9A'
                             }}>
                               {pharmacy.name}
                             </span>
                             <span style={{
                               fontFamily: 'Open Sans, sans-serif',
-                              fontSize: '14px',
-                              color: '#6b7280'
+                              fontSize: '12px',
+                              color: '#6b7280',
+                              padding: '2px 6px',
+                              backgroundColor: '#e5e7eb',
+                              borderRadius: '4px'
                             }}>
-                              | ☎ {pharmacy.phone}
+                              ☎ {pharmacy.phone}
                             </span>
                           </div>
                           <p style={{
                             fontFamily: 'Open Sans, sans-serif',
-                            fontSize: '14px',
+                            fontSize: '13px',
                             color: '#6b7280',
                             margin: 0
                           }}>
-                            {pharmacy.address}
+                            📍 {pharmacy.address}
                           </p>
                         </div>
                         <button
@@ -1698,24 +1662,18 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                             setShowPharmacyModal(false);
                           }}
                           style={{
-                            backgroundColor: '#2563eb',
+                            backgroundColor: '#2B4C9A',
                             color: '#ffffff',
-                            padding: '8px 24px',
-                            fontSize: '14px',
+                            padding: '8px 18px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             fontFamily: 'Open Sans, sans-serif',
-                            borderRadius: '8px',
+                            borderRadius: '6px',
                             border: 'none',
                             cursor: 'pointer',
-                            transition: 'all 0.2s',
                             whiteSpace: 'nowrap',
-                            flexShrink: 0
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1d4ed8';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#2563eb';
+                            flexShrink: 0,
+                            marginLeft: '12px'
                           }}
                         >
                           Select

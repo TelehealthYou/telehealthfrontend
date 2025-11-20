@@ -13,6 +13,11 @@ interface Step3PaymentProps {
 }
 
 export function Step3Payment({ onNext, onBack, formData, updateFormData, onPreview }: Step3PaymentProps) {
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
+  const [isProcessing, setIsProcessing] = useState(false);
+  
   const [paymentInfo, setPaymentInfo] = useState({
     nameOnCard: formData.nameOnCard || "",
     cardNumber: formData.cardNumber || "",
@@ -155,6 +160,117 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
 
   const handleChange = (field: string, value: string | boolean) => {
     setPaymentInfo({ ...paymentInfo, [field]: value });
+    // Clear error when user starts typing
+    if (paymentErrors[field]) {
+      setPaymentErrors({ ...paymentErrors, [field]: '' });
+    }
+  };
+
+  // Luhn Algorithm for card number validation
+  const validateCardNumber = (cardNumber: string): boolean => {
+    const digits = cardNumber.replace(/\s/g, '');
+    if (!/^\d+$/.test(digits)) return false;
+    if (digits.length < 13 || digits.length > 19) return false;
+
+    let sum = 0;
+    let isEven = false;
+    for (let i = digits.length - 1; i >= 0; i--) {
+      let digit = parseInt(digits[i]);
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
+      isEven = !isEven;
+    }
+    return sum % 10 === 0;
+  };
+
+  // Format card number with spaces
+  const formatCardNumber = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    const groups = digits.match(/.{1,4}/g);
+    return groups ? groups.join(' ') : digits;
+  };
+
+  // Format expiration date as MM/YY
+  const formatExpiration = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length >= 2) {
+      return digits.slice(0, 2) + '/' + digits.slice(2, 4);
+    }
+    return digits;
+  };
+
+  // Validate expiration date
+  const validateExpiration = (expiration: string): boolean => {
+    if (!/^\d{2}\/\d{2}$/.test(expiration)) return false;
+    const [month, year] = expiration.split('/').map(Number);
+    if (month < 1 || month > 12) return false;
+    
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear() % 100;
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    if (year < currentYear) return false;
+    if (year === currentYear && month < currentMonth) return false;
+    
+    return true;
+  };
+
+  // Validate CVV
+  const validateCVV = (cvv: string): boolean => {
+    return /^\d{3,4}$/.test(cvv);
+  };
+
+  // Handle card number change with formatting
+  const handleCardNumberChange = (value: string) => {
+    const formatted = formatCardNumber(value);
+    if (formatted.replace(/\s/g, '').length <= 19) {
+      handleChange('cardNumber', formatted);
+    }
+  };
+
+  // Handle expiration change with formatting
+  const handleExpirationChange = (value: string) => {
+    const formatted = formatExpiration(value);
+    if (formatted.length <= 5) {
+      handleChange('expiration', formatted);
+    }
+  };
+
+  // Validate all payment fields
+  const validatePaymentFields = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!paymentInfo.nameOnCard.trim()) {
+      errors.nameOnCard = 'Name on card is required';
+    }
+
+    if (!paymentInfo.cardNumber.trim()) {
+      errors.cardNumber = 'Card number is required';
+    } else if (!validateCardNumber(paymentInfo.cardNumber)) {
+      errors.cardNumber = 'Invalid card number';
+    }
+
+    if (!paymentInfo.expiration.trim()) {
+      errors.expiration = 'Expiration date is required';
+    } else if (!validateExpiration(paymentInfo.expiration)) {
+      errors.expiration = 'Invalid or expired date (MM/YY)';
+    }
+
+    if (!paymentInfo.cvv.trim()) {
+      errors.cvv = 'CVV is required';
+    } else if (!validateCVV(paymentInfo.cvv)) {
+      errors.cvv = 'Invalid CVV (3-4 digits)';
+    }
+
+    if (!paymentInfo.agreeToTerms) {
+      errors.agreeToTerms = 'You must agree to terms and conditions';
+    }
+
+    setPaymentErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleStateChange = (option: any) => {
@@ -163,32 +279,43 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
   };
 
   const handleNext = () => {
-    // If using home address for billing, copy home address fields from formData into the payment info before updating
-    if (paymentInfo.useHomeAddress) {
-      const merged = {
-        ...paymentInfo,
-        billingAddress: formData.homeAddress || paymentInfo.billingAddress,
-        city: formData.city || paymentInfo.city,
-        state: formData.state || paymentInfo.state,
-        zip: formData.zip || paymentInfo.zip
-      };
-      console.log('Step3Payment: handleNext merging data (useHomeAddress)', merged);
-      updateFormData(merged);
-      onNext(merged);
-    } else {
-      console.log('Step3Payment: handleNext merging data (billingAddress)', paymentInfo);
-      updateFormData(paymentInfo);
-      onNext(paymentInfo);
+    // Validate payment fields
+    if (!validatePaymentFields()) {
+      // Scroll to first error
+      const firstErrorField = Object.keys(paymentErrors)[0];
+      const element = document.querySelector(`[name="${firstErrorField}"]`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
+
+    // Simulate payment processing
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      
+      // If using home address for billing, copy home address fields from formData into the payment info before updating
+      if (paymentInfo.useHomeAddress) {
+        const merged = {
+          ...paymentInfo,
+          billingAddress: formData.homeAddress || paymentInfo.billingAddress,
+          city: formData.city || paymentInfo.city,
+          state: formData.state || paymentInfo.state,
+          zip: formData.zip || paymentInfo.zip
+        };
+        console.log('Step3Payment: handleNext merging data (useHomeAddress)', merged);
+        updateFormData(merged);
+        onNext(merged);
+      } else {
+        console.log('Step3Payment: handleNext merging data (billingAddress)', paymentInfo);
+        updateFormData(paymentInfo);
+        onNext(paymentInfo);
+      }
+    }, 1500);
   };
 
   const isFormValid = () => {
-    // Relax validation so submit can be used in demo mode or when only essentials are provided.
-    // Keep basic card fields and terms agreement as required.
+    // Basic validation for enabling submit button
     const basicPaymentValid = paymentInfo.nameOnCard && paymentInfo.cardNumber && paymentInfo.expiration && paymentInfo.cvv;
-
-    // Accept either home address (if provided) or billing address if not using the home address.
-    // For demo purposes, don't require address fields; only require basic card info and terms checked.
     return basicPaymentValid && paymentInfo.agreeToTerms;
   };
 
@@ -338,40 +465,71 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
           <h3 style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '28px', fontWeight: '700', color: '#1f2937', marginTop: 0 }}>Summary</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', marginLeft: '50px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600 }}>Primary Care</span>
-              <span style={{ fontWeight: 600 }}>$ 50.00</span>
+              <span style={{ fontWeight: 600, fontFamily: 'Open Sans, sans-serif', fontSize: '15px', color: '#1f2937' }}>{formData.service || 'Primary Care'}</span>
+              <span style={{ fontWeight: 600, fontFamily: 'Open Sans, sans-serif', fontSize: '15px', color: '#1f2937' }}>$ 50.00</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600 }}>Subscription</span>
-              <span style={{ fontWeight: 600 }}>$ 50.00</span>
+              <span style={{ fontWeight: 600, fontFamily: 'Open Sans, sans-serif', fontSize: '15px', color: '#1f2937' }}>Subscription</span>
+              <span style={{ fontWeight: 600, fontFamily: 'Open Sans, sans-serif', fontSize: '15px', color: '#1f2937' }}>$ 50.00</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-              <span style={{ fontWeight: 700 }}>Sub Total</span>
-              <span style={{ fontWeight: 700 }}>$ 100.00</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+              <span style={{ fontWeight: 700, fontFamily: 'Open Sans, sans-serif', fontSize: '16px', color: '#1f2937' }}>Sub Total</span>
+              <span style={{ fontWeight: 700, fontFamily: 'Open Sans, sans-serif', fontSize: '16px', color: '#1f2937' }}>$ 100.00</span>
             </div>
+            {discountApplied && discountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <span style={{ fontWeight: 600, fontFamily: 'Open Sans, sans-serif', fontSize: '15px', color: '#10b981' }}>Discount Applied</span>
+                <span style={{ fontWeight: 600, fontFamily: 'Open Sans, sans-serif', fontSize: '15px', color: '#10b981' }}>- $ {discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div style={{ marginTop: '12px' }}>
-              <label style={{ fontWeight: 600 }}>Discount Code</label>
+              <label style={{ fontWeight: 600, fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', display: 'block', marginBottom: '8px' }}>Discount Code</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <Input
                   value={paymentInfo.couponCode}
                   onChange={(e) => handleChange("couponCode", e.target.value)}
-                  placeholder="WELCOME"
+                  placeholder="Enter the Discount Code"
                   className="h-12"
                   style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', flex: 1 }}
                 />
                 <button
                   type="button"
-                  style={{ backgroundColor: '#ffffff', color: '#2B4C9A', padding: '0 24px', fontSize: '16px', fontWeight: '600', borderRadius: '6px', border: '1px solid #2B4C9A', cursor: 'pointer' }}
+                  onClick={() => {
+                    // Simple discount logic: WELCOME = $5 off, SAVE10 = 10% off
+                    const code = paymentInfo.couponCode.toUpperCase();
+                    if (code === 'WELCOME') {
+                      setDiscountAmount(5);
+                      setDiscountApplied(true);
+                    } else if (code === 'SAVE10') {
+                      setDiscountAmount(10);
+                      setDiscountApplied(true);
+                    } else if (code) {
+                      alert('Invalid discount code');
+                      setDiscountAmount(0);
+                      setDiscountApplied(false);
+                    }
+                  }}
+                  style={{ backgroundColor: '#ffffff', color: '#2B4C9A', padding: '0 24px', fontSize: '16px', fontWeight: '600', borderRadius: '6px', border: '1px solid #2B4C9A', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2B4C9A';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.color = '#2B4C9A';
+                  }}
                 >
                   Apply
                 </button>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-              <span style={{ fontWeight: 600 }}>Due Total</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '2px solid #2B4C9A' }}>
+              <span style={{ fontWeight: 700, fontFamily: 'Open Sans, sans-serif', fontSize: '18px', color: '#2B4C9A' }}>Due Total</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ textDecoration: 'line-through', color: '#ef4444' }}>$ 100.00</span>
-                <span style={{ fontWeight: 700, color: '#111827' }}>$ 95.00</span>
+                {discountApplied && discountAmount > 0 && (
+                  <span style={{ textDecoration: 'line-through', color: '#ef4444', fontFamily: 'Open Sans, sans-serif', fontSize: '16px' }}>$ 100.00</span>
+                )}
+                <span style={{ fontWeight: 700, color: '#2B4C9A', fontFamily: 'Open Sans, sans-serif', fontSize: '18px' }}>$ {(100 - discountAmount).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -403,15 +561,19 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
               {/* Name on Card */}
               <div style={{ gridColumn: '1 / -1', marginTop: '12px' }}>
                 <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-                  Name as appear on the card
+                  Name as appear on the card *
                 </label>
                 <Input
+                  name="nameOnCard"
                   value={paymentInfo.nameOnCard}
                   onChange={(e) => handleChange("nameOnCard", e.target.value)}
-                  placeholder="Name as appear on the card"
+                  placeholder="John Doe"
                   className="h-12"
-                  style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', width: '100%' }}
+                  style={{ borderRadius: '6px', border: `1px solid ${paymentErrors.nameOnCard ? '#ef4444' : '#d1d5db'}`, fontFamily: 'Open Sans, sans-serif', width: '100%' }}
                 />
+                {paymentErrors.nameOnCard && (
+                  <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', fontFamily: 'Open Sans, sans-serif' }}>{paymentErrors.nameOnCard}</p>
+                )}
               </div>
 
               {/* Card Number */}
@@ -422,12 +584,13 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
                 </label>
                 <div style={{ position: 'relative' }}>
                   <Input
+                    name="cardNumber"
                     value={paymentInfo.cardNumber}
-                    onChange={(e) => handleChange("cardNumber", e.target.value)}
+                    onChange={(e) => handleCardNumberChange(e.target.value)}
                     placeholder="1234 5678 9012 3456"
                     maxLength={19}
                     className="h-12"
-                    style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', paddingRight: '180px' }}
+                    style={{ borderRadius: '6px', border: `1px solid ${paymentErrors.cardNumber ? '#ef4444' : '#d1d5db'}`, fontFamily: 'Open Sans, sans-serif', paddingRight: '180px' }}
                   />
                   {/* Payment Card Logos */}
                   <div style={{
@@ -514,6 +677,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
                     </div>
                   </div>
                 </div>
+                {paymentErrors.cardNumber && (
+                  <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', fontFamily: 'Open Sans, sans-serif' }}>{paymentErrors.cardNumber}</p>
+                )}
               </div>
               
               {/* Expiration */}
@@ -522,13 +688,17 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
                   Expiration Date *
                 </label>
                 <Input
+                  name="expiration"
                   value={paymentInfo.expiration}
-                  onChange={(e) => handleChange("expiration", e.target.value)}
+                  onChange={(e) => handleExpirationChange(e.target.value)}
                   placeholder="MM/YY"
                   maxLength={5}
                   className="h-12"
-                  style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
+                  style={{ borderRadius: '6px', border: `1px solid ${paymentErrors.expiration ? '#ef4444' : '#d1d5db'}`, fontFamily: 'Open Sans, sans-serif' }}
                 />
+                {paymentErrors.expiration && (
+                  <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', fontFamily: 'Open Sans, sans-serif' }}>{paymentErrors.expiration}</p>
+                )}
               </div>
 
               {/* CVV */}
@@ -537,14 +707,21 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
                   CVV *
                 </label>
                 <Input
+                  name="cvv"
                   value={paymentInfo.cvv}
-                  onChange={(e) => handleChange("cvv", e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 4) handleChange("cvv", value);
+                  }}
                   placeholder="123"
                   maxLength={4}
-                  type="password"
+                  type="text"
                   className="h-12"
-                  style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
+                  style={{ borderRadius: '6px', border: `1px solid ${paymentErrors.cvv ? '#ef4444' : '#d1d5db'}`, fontFamily: 'Open Sans, sans-serif' }}
                 />
+                {paymentErrors.cvv && (
+                  <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', fontFamily: 'Open Sans, sans-serif' }}>{paymentErrors.cvv}</p>
+                )}
               </div>
             </div>
 
@@ -558,35 +735,47 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
               )}
 
               {paymentInfo.useHomeAddress && formData.homeAddress && (
-                <div style={{ marginTop: '12px' }}>
-                  <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', margin: 0 }}>
-                    <strong>Home Address:</strong> {formData.homeAddress}, {formData.city}, {formData.state} {formData.zip}
-                  </p>
+                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                  <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '600', color: '#2B4C9A', marginBottom: '8px', marginTop: 0 }}>Home Address (Used for Billing):</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', margin: 0 }}>
+                      <span style={{ fontWeight: '600' }}>Street:</span> {formData.homeAddress}
+                    </p>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', margin: 0 }}>
+                      <span style={{ fontWeight: '600' }}>City:</span> {formData.city}
+                    </p>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', margin: 0 }}>
+                      <span style={{ fontWeight: '600' }}>State:</span> {formData.state}
+                    </p>
+                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', margin: 0 }}>
+                      <span style={{ fontWeight: '600' }}>ZIP:</span> {formData.zip}
+                    </p>
+                  </div>
                 </div>
               )}
 
 
             {/* Billing Address */}
             <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ marginBottom: '16px' }}>
                 {!paymentInfo.useHomeAddress && (
                 <h3 style={{
                   fontFamily: 'Open Sans, sans-serif',
                   fontSize: '20px',
                   fontWeight: '600',
                   color: '#1f2937',
-                  margin: 0
+                  margin: '0 0 16px 0'
                 }}>
                   Billing Address
                 </h3>
                 )}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={paymentInfo.savePaymentMethod}
                       onChange={(e) => handleChange("savePaymentMethod", e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px', flexShrink: 0 }}
                     />
                     <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937' }}>Save and use this payment method for future payments</span>
                   </label>
@@ -595,7 +784,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
                       type="checkbox"
                       checked={paymentInfo.useHomeAddress}
                       onChange={(e) => handleChange("useHomeAddress", e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px', flexShrink: 0 }}
                     />
                     <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#ef4444' }}>Mailing address same as home address (Collapse if address is different)</span>
                   </label>
@@ -709,27 +898,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
               </div>
             </div>
 
-            {/* Coupon Code moved to Summary */}
+            
 
-            {/* Terms Agreement */}
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={paymentInfo.agreeToTerms}
-                  onChange={(e) => handleChange("agreeToTerms", e.target.checked)}
-                  style={{ marginTop: '2px', width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <div>
-                  <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937', margin: 0 }}>
-                    I agree to the{" "}
-                    <a href="#" style={{ color: '#2B4C9A', textDecoration: 'underline' }}>terms and conditions</a>
-                    {" "}and{" "}
-                    <a href="#" style={{ color: '#2B4C9A', textDecoration: 'underline' }}>privacy policy</a>
-                  </p>
-                </div>
-              </label>
-            </div>
+           
           </div>
 
           {/* Navigation Buttons */}
@@ -777,8 +948,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button
                 onClick={() => { console.log('Submit pressed. isFormValid:', isFormValid()); handleNext(); }}
+                disabled={isProcessing}
                 style={{
-                  backgroundColor: isFormValid() ? '#2B4C9A' : '#9ca3af',
+                  backgroundColor: isProcessing ? '#6b7280' : (isFormValid() ? '#2B4C9A' : '#9ca3af'),
                   color: '#ffffff',
                   padding: '10px 30px',
                   fontSize: '18px',
@@ -787,40 +959,46 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData, onPrevi
                   borderRadius: '8px',
                   border: 'none',
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  cursor: isFormValid() ? 'pointer' : 'pointer',
-                  opacity: isFormValid() ? 1 : 0.8,
+                  cursor: isProcessing ? 'not-allowed' : (isFormValid() ? 'pointer' : 'pointer'),
+                  opacity: isFormValid() && !isProcessing ? 1 : 0.8,
                   transition: 'all 0.2s',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '8px',
+                  minWidth: '180px',
+                  justifyContent: 'center'
                 }}
                 onMouseEnter={(e) => {
-                  if (isFormValid()) {
+                  if (isFormValid() && !isProcessing) {
                     e.currentTarget.style.backgroundColor = '#1c3a7a';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (isFormValid()) {
+                  if (isFormValid() && !isProcessing) {
                     e.currentTarget.style.backgroundColor = '#2B4C9A';
                   }
                 }}
               >
-                Submit
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                {isProcessing ? (
+                  <>
+                    <svg style={{ animation: 'spin 1s linear infinite' }} width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25"></circle>
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round"></path>
+                    </svg>
+                    Processing...
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                  </>
+                ) : (
+                  <>
+                    Submit
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </>
+                )}
               </button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginLeft: 12 }}>
-              <button
-                type="button"
-                style={{ backgroundColor: '#ffffff', color: '#2B4C9A', padding: '10px 18px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', border: '1px solid #2B4C9A', cursor: 'pointer', marginLeft: '12px' }}
-                onClick={() => { console.log('Preview pressed'); if (onPreview) onPreview(); else { updateFormData(paymentInfo); onNext(paymentInfo); } }}
-              >
-                Preview
-              </button>
-            </div>
-            <div></div>
+            
           </div>
         </div>
       </div>
