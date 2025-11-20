@@ -600,9 +600,21 @@ export function LandingPage({ onBookAppointment }: LandingPageProps) {
               </div>
             </div>
           </div>
-          
-          {/* Doctor Slide Indicator */}
-          <div className="relative flex justify-center" style={{ marginTop: '10px', marginBottom: '20px', top: '40px' }}>
+        </div>
+      </section>
+
+
+      <div style={
+        {
+          background:"#cfe6ee",
+          borderTop: ".5px solid #b3d1d9",
+        }
+      }>
+          {/* Doctor Slider */}
+          <div className="py-4 md:py-6">        
+            <DoctorSlider currentSlide={currentSlide} onSlideChange={setCurrentSlide} />
+             {/* Doctor Slide Indicator */}
+          <div className="relative flex justify-center" style={{ marginBottom: '20px', top: '45px' }}>
             <style dangerouslySetInnerHTML={{__html: `
               .indicator {
                 display: flex;
@@ -635,13 +647,10 @@ export function LandingPage({ onBookAppointment }: LandingPageProps) {
               ))}
             </div>
           </div>
-
-          {/* Doctor Slider */}
-          <div className="py-4 md:py-6">        
-            <DoctorSlider currentSlide={currentSlide} onSlideChange={setCurrentSlide} />
           </div>
-        </div>
-      </section>
+
+         
+      </div>
 
       {/* Services Section - Alternating Layout */}
       <section id="services" className="bg-white py-10 md:py-16">
