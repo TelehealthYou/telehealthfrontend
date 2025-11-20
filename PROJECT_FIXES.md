@@ -53,6 +53,7 @@ Successfully identified and fixed all errors in the Tele Health Appointment Syst
 - `src/components/VideoCallCard.tsx`: Removed unused imports
 - `src/components/VideoCallScreen.tsx`: Prefixed unused parameters with `_`
 - `src/components/booking/Step4Doctor.tsx`: Prefixed unused state with `_`
+ - `src/components/booking/Step4VisitReason.tsx`: Removed Step 4 and archived the component; Step 3 is now final in the booking flow
 
 ### 7. TypeScript Type Errors (8 errors)
 **Fixed**:
