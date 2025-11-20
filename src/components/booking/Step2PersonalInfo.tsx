@@ -22,11 +22,17 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
   const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
   const [isVerified, setIsVerified] = useState(false);
   const [otpError, setOtpError] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
     formData.dob ? new Date(formData.dob) : undefined
   );
   const [absenceDate, setAbsenceDate] = useState<Date | undefined>(undefined);
   const [returnDate, setReturnDate] = useState<Date | undefined>(undefined);
+  // Control popover open states so we can close them programmatically
+  const [dobPopoverOpen, setDobPopoverOpen] = useState(false);
+  const [absencePopoverOpen, setAbsencePopoverOpen] = useState(false);
+  const [returnPopoverOpen, setReturnPopoverOpen] = useState(false);
   
   // React Select options
   const stateOptions = [
@@ -56,8 +62,8 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
   const customSelectStyles = {
     control: (base: any, state: any) => ({
       ...base,
-      height: '48px',
-      minHeight: '48px',
+      height: '40px',
+      minHeight: '40px',
       borderRadius: '8px',
       border: `1px solid ${state.isFocused ? '#2B4C9A' : '#d1d5db'}`,
       boxShadow: 'none',
@@ -153,6 +159,8 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
       setPersonalInfo({ ...personalInfo, dob: formattedDate });
+      // close the DOB popover after a date is selected
+      setDobPopoverOpen(false);
     }
   };
 
@@ -161,6 +169,8 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
       setAdditionalInfo({ ...additionalInfo, absenceSince: formattedDate });
+      // close the Absence Since popover after a date is selected
+      setAbsencePopoverOpen(false);
     }
   };
 
@@ -169,6 +179,8 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
       setAdditionalInfo({ ...additionalInfo, returnOn: formattedDate });
+      // close the Return On popover after a date is selected
+      setReturnPopoverOpen(false);
     }
   };
 
@@ -178,6 +190,28 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
       setOtpCode(["", "", "", "", "", ""]);
       setOtpError(false);
     }
+  };
+
+  const validatePersonalInfoFields = () => {
+    const errors: Record<string, string> = {};
+
+    if (!personalInfo.firstName) errors.firstName = 'First name is required';
+    if (!personalInfo.lastName) errors.lastName = 'Last name is required';
+    if (!personalInfo.homeAddress) errors.homeAddress = 'Home address is required';
+    if (!personalInfo.city) errors.city = 'City is required';
+    if (!personalInfo.state) errors.state = 'State is required';
+    if (!personalInfo.zip) errors.zip = 'Zip is required';
+    if (personalInfo.zip && personalInfo.zip.length < 5) errors.zip = 'Zip must be 5 digits';
+    if (!personalInfo.dob) errors.dob = 'Date of birth is required';
+    if (!personalInfo.phone) errors.phone = 'Phone number is required';
+    if (personalInfo.phone && !/^[0-9]{10}$/.test(personalInfo.phone)) errors.phone = 'Enter a valid 10-digit phone number';
+    if (!personalInfo.email) errors.email = 'Email is required';
+    if (personalInfo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email)) errors.email = 'Enter a valid email address';
+    if (!personalInfo.password) errors.password = 'Password is required';
+    if (!personalInfo.confirmPassword) errors.confirmPassword = 'Please confirm your password';
+    if (personalInfo.password && personalInfo.confirmPassword && personalInfo.password !== personalInfo.confirmPassword) errors.confirmPassword = 'Passwords do not match';
+
+    return errors;
   };
 
   const handleVerifyOTP = () => {
@@ -214,8 +248,17 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
   };
 
   const handleSubmit = () => {
-    if (isPersonalInfoValid()) {
+    setSubmitAttempted(true);
+    const errors = validatePersonalInfoFields();
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length === 0) {
       handleSendOTP();
+    } else {
+      // focus first invalid field
+      const firstKey = Object.keys(errors)[0];
+      const el = document.querySelector(`[name="${firstKey}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement | null;
+      el?.focus();
     }
   };
 
@@ -279,7 +322,7 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
         }}>
           {/* Title */}
           <h1 style={{ fontFamily: 'Open Sans, sans-serif', color: '#28436F', fontSize: '42px', fontWeight: '600', textAlign: 'center', marginBottom: '1.5rem' }}>
-            Let's get to know you
+            Let's get started
           </h1>
 
           {/* Progress Steps */}
@@ -396,113 +439,169 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
         <div className="space-y-6">
           {/* Form */}
           <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8">
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Name Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>First Name *</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>First Name <span style={{color:'#dc2626'}}>*</span></label>
                   <Input
+                    name="firstName"
                     value={personalInfo.firstName}
                     onChange={(e) => handleChange("firstName", e.target.value)}
                     placeholder="First Name"
-                    className="h-12"
+                    className="h-10"
                     disabled={isVerified}
-                    style={{borderRadius:'6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
+                    style={{
+                      borderRadius:'6px',
+                      backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
+                      cursor: isVerified ? 'not-allowed' : 'text',
+                      border: `1px solid ${formErrors.firstName ? '#ef4444' : '#d1d5db'}`
+                    }}
                   />
+                  {submitAttempted && formErrors.firstName && (
+                    <p style={{ color: '#dc2626', marginTop: '2px', fontSize: '12px' }}>{formErrors.firstName}</p>
+                  )}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Middle Name</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Middle Name</label>
                   <Input
+                    name="middleName"
                     value={personalInfo.middleName}
                     onChange={(e) => handleChange("middleName", e.target.value)}
                     placeholder="Middle Name"
-                    className="h-12"
+                    className="h-10"
                     disabled={isVerified}
                     style={{borderRadius:'6px' , backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Last Name *</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Last Name <span style={{color:'#dc2626'}}>*</span></label>
                   <Input
+                    name="lastName"
                     value={personalInfo.lastName}
                     onChange={(e) => handleChange("lastName", e.target.value)}
                     placeholder="Last Name"
-                    className="h-12"
+                    className="h-10"
                     disabled={isVerified}
-                    style={{borderRadius: '6px' , backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
+                    style={{
+                      borderRadius: '6px',
+                      backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
+                      cursor: isVerified ? 'not-allowed' : 'text',
+                      border: `1px solid ${formErrors.lastName ? '#ef4444' : '#d1d5db'}`
+                    }}
                   />
+                  {submitAttempted && formErrors.lastName && (
+                    <p style={{ color: '#dc2626', marginTop: '2px', fontSize: '12px' }}>{formErrors.lastName}</p>
+                  )}
                 </div>
               </div>
 
               {/* Home Address */}
               <div>
-                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Home Address *</label>
+                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Home Address <span style={{color:'#dc2626'}}>*</span></label>
                 <Input
+                  name="homeAddress"
                   value={personalInfo.homeAddress}
                   onChange={(e) => handleChange("homeAddress", e.target.value)}
                   placeholder="Home Address"
-                  className="h-12"
+                  className="h-10"
                   disabled={isVerified}
-                  style={{borderRadius: '6px' , backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
+                  style={{
+                    borderRadius: '6px',
+                    backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
+                    cursor: isVerified ? 'not-allowed' : 'text',
+                    border: `1px solid ${formErrors.homeAddress ? '#ef4444' : '#d1d5db'}`
+                  }}
                 />
+                {submitAttempted && formErrors.homeAddress && (
+                  <p style={{ color: '#dc2626', marginTop: '2px', fontSize: '12px' }}>{formErrors.homeAddress}</p>
+                )}
               </div>
 
               {/* City, State, Zip Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>City *</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>City <span style={{color:'#dc2626'}}>*</span></label>
                   <Input
+                    name="city"
                     value={personalInfo.city}
                     onChange={(e) => handleChange("city", e.target.value)}
                     placeholder="City"
-                    className="h-12"
+                    className="h-10"
                     disabled={isVerified}
-                    style={{borderRadius: '6px' , backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
+                    style={{
+                      borderRadius: '6px',
+                      backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
+                      cursor: isVerified ? 'not-allowed' : 'text',
+                      border: `1px solid ${formErrors.city ? '#ef4444' : '#d1d5db'}`
+                    }}
                   />
+                  {submitAttempted && formErrors.city && (
+                    <p style={{ color: '#dc2626', marginTop: '2px', fontSize: '12px' }}>{formErrors.city}</p>
+                  )}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>State *</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>State <span style={{color:'#dc2626'}}>*</span></label>
                   <Input
+                    name="state"
                     value={personalInfo.state}
                     onChange={(e) => handleChange("state", e.target.value)}
                     placeholder="State"
-                    className="h-12"
+                    className="h-10"
                     disabled={isVerified}
-                    style={{borderRadius: '6px' , backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
+                    style={{
+                      borderRadius: '6px',
+                      backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
+                      cursor: isVerified ? 'not-allowed' : 'text',
+                      border: `1px solid ${formErrors.state ? '#ef4444' : '#d1d5db'}`
+                    }}
                   />
+                  {submitAttempted && formErrors.state && (
+                    <p style={{ color: '#dc2626', marginTop: '2px', fontSize: '12px' }}>{formErrors.state}</p>
+                  )}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Zip *</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Zip <span style={{color:'#dc2626'}}>*</span></label>
                   <Input
+                    name="zip"
                     value={personalInfo.zip}
                     onChange={(e) => handleChange("zip", e.target.value)}
                     placeholder="Zip"
-                    className="h-12"
+                    className="h-10"
                     maxLength={5}
                     disabled={isVerified}
-                    style={{borderRadius: '6px' , backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
+                    style={{
+                      borderRadius: '6px',
+                      backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
+                      cursor: isVerified ? 'not-allowed' : 'text',
+                      border: `1px solid ${formErrors.zip ? '#ef4444' : '#d1d5db'}`
+                    }}
                   />
+                  {submitAttempted && formErrors.zip && (
+                    <p style={{ color: '#dc2626', marginTop: '2px', fontSize: '12px' }}>{formErrors.zip}</p>
+                  )}
                 </div>
               </div>
 
               {/* DOB and Phone Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Date of Birth *</label>
-                  <Popover>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Date of Birth <span style={{color:'#dc2626'}}>*</span></label>
+                  <Popover open={dobPopoverOpen} onOpenChange={setDobPopoverOpen}>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
                         disabled={isVerified}
+                        name="dob"
                         style={{
                           width: '100%',
-                          height: '48px',
+                          height: '40px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '0 12px',
                           backgroundColor: isVerified ? '#f3f4f6' : '#ffffff',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${formErrors.dob ? '#ef4444' : '#d1d5db'}`,
                           borderRadius: '6px',
                           fontFamily: 'Open Sans, sans-serif',
                           fontSize: '14px',
@@ -523,6 +622,9 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                         <CalendarIcon size={20} style={{ color: '#9ca3af' }} />
                       </button>
                     </PopoverTrigger>
+                    {submitAttempted && formErrors.dob && (
+                      <p style={{ color: '#dc2626', marginTop: '6px', fontSize: '13px' }}>{formErrors.dob}</p>
+                    )}
                     <PopoverContent 
                       className="w-auto p-0" 
                       align="start"
@@ -545,171 +647,186 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                   </Popover>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-                    Phone Number * {isVerified && <span style={{ color: '#10b981', fontSize: '14px', fontWeight: '600', marginLeft: '8px' }}>✓ Verified</span>}
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>
+                    Phone Number <span style={{color:'#dc2626'}}>*</span> {isVerified && <span style={{ color: '#10b981', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }}>✓ Verified</span>}
                   </label>
                   <div style={{ position: 'relative' }}>
                     <div style={{
                       position: 'absolute',
-                      left: '12px',
+                      left: '8px',
                       top: '50%',
                       transform: 'translateY(-50%)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '6px',
                       color: '#6b7280',
                       pointerEvents: 'none',
                       zIndex: 10,
                       fontFamily: 'Open Sans, sans-serif',
                       fontSize: '14px'
                     }}>
-                      <span style={{ fontSize: '18px' }}>🇺🇸</span>
-                      <span>+1</span>
+                      <span style={{ fontSize: '16px', lineHeight: '16px' }}>🇺🇸</span>
+                      <span style={{ fontSize: '13px' }}>+1</span>
                     </div>
                     <Input
+                      name="phone"
                       type="tel"
                       value={personalInfo.phone}
                       onChange={(e) => handleChange("phone", e.target.value)}
                       placeholder="Phone Number"
-                      className="h-12"
-                      style={{ paddingLeft: '64px', borderRadius: '6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
+                      className="h-10"
+                      style={{ paddingLeft: '56px', borderRadius: '6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text', border: `1px solid ${formErrors.phone ? '#ef4444' : '#d1d5db'}` }}
                       maxLength={10}
                       disabled={isVerified}
                     />
+                    {submitAttempted && formErrors.phone && (
+                      <span style={{ position: 'absolute', left: 0, top: '100%', color: '#dc2626', fontSize: '12px', marginTop: '2px', fontFamily: 'Open Sans, sans-serif', zIndex: 20 }}>{formErrors.phone}</span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Email Address */}
               <div>
-                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-                  Email Address * {isVerified && <span style={{ color: '#10b981', fontSize: '14px', fontWeight: '600', marginLeft: '8px' }}>✓ Verified</span>}
+                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>
+                  Email Address <span style={{color:'#dc2626'}}>*</span> {isVerified && <span style={{ color: '#10b981', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }}>✓ Verified</span>}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={20} />
-                  <Input
-                    type="email"
-                    value={personalInfo.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
-                    placeholder="Email Address"
-                    className="h-12 pl-12"
-                    disabled={isVerified}
-                    style={{ borderRadius: '6px' ,backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={20} />
+                    <Input
+                      name="email"
+                      type="email"
+                      value={personalInfo.email}
+                      onChange={(e) => handleChange("email", e.target.value)}
+                      placeholder="Email Address"
+                      className="h-10 pl-10"
+                      disabled={isVerified}
+                      style={{ borderRadius: '6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text', border: `1px solid ${formErrors.email ? '#ef4444' : '#d1d5db'}` }}
+                    />
+                    {submitAttempted && formErrors.email && (
+                      <span style={{ position: 'absolute', left: 0, top: '100%', color: '#dc2626', fontSize: '13px', marginTop: '2px', fontFamily: 'Open Sans, sans-serif', zIndex: 20 }}>{formErrors.email}</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Password Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Password *</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Password <span style={{color:'#dc2626'}}>*</span></label>
                   <div style={{ position: 'relative' }}>
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={personalInfo.password}
-                      onChange={(e) => handleChange("password", e.target.value)}
-                      placeholder="Password"
-                      className="h-12"
-                      style={{ paddingRight: '40px', borderRadius: '6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
-                      disabled={isVerified}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={isVerified}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: isVerified ? 'not-allowed' : 'pointer',
-                        color: '#9ca3af',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '4px',
-                        zIndex: 10
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isVerified) e.currentTarget.style.color = '#4b5563';
-                      }}
-                      onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                    >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
+                    <div style={{ position: 'relative' }}>
+                      <Input
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        value={personalInfo.password}
+                        onChange={(e) => handleChange("password", e.target.value)}
+                        placeholder="Password"
+                        className="h-10"
+                        style={{ paddingRight: '40px', borderRadius: '6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text', border: `1px solid ${formErrors.password ? '#ef4444' : '#d1d5db'}` }}
+                        disabled={isVerified}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isVerified}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: isVerified ? 'not-allowed' : 'pointer',
+                          color: '#9ca3af',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '4px',
+                          zIndex: 10
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isVerified) e.currentTarget.style.color = '#4b5563';
+                        }}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                      {submitAttempted && formErrors.password && (
+                        <span style={{ position: 'absolute', left: 0, top: '100%', color: '#dc2626', fontSize: '13px', marginTop: '2px', fontFamily: 'Open Sans, sans-serif', zIndex: 20 }}>{formErrors.password}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Confirm Password *</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Confirm Password <span style={{color:'#dc2626'}}>*</span></label>
                   <div style={{ position: 'relative' }}>
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={personalInfo.confirmPassword}
-                      onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                      placeholder="Confirm Password"
-                      className="h-12"
-                      style={{ paddingRight: '40px', borderRadius: '6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text' }}
-                      disabled={isVerified}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      disabled={isVerified}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: isVerified ? 'not-allowed' : 'pointer',
-                        color: '#9ca3af',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '4px',
-                        zIndex: 10
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isVerified) e.currentTarget.style.color = '#4b5563';
-                      }}
-                      onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                    >
-                      {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
+                    <div style={{ position: 'relative' }}>
+                      <Input
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={personalInfo.confirmPassword}
+                        onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                        placeholder="Confirm Password"
+                        className="h-10"
+                        style={{ paddingRight: '40px', borderRadius: '6px', backgroundColor: isVerified ? '#f3f4f6' : '#ffffff', cursor: isVerified ? 'not-allowed' : 'text', border: `1px solid ${formErrors.confirmPassword ? '#ef4444' : '#d1d5db'}` }}
+                        disabled={isVerified}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        disabled={isVerified}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: isVerified ? 'not-allowed' : 'pointer',
+                          color: '#9ca3af',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '4px',
+                          zIndex: 10
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isVerified) e.currentTarget.style.color = '#4b5563';
+                        }}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                      >
+                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                      {submitAttempted && formErrors.confirmPassword && (
+                        <span style={{ position: 'absolute', left: 0, top: '100%', color: '#dc2626', fontSize: '13px', marginTop: '2px', fontFamily: 'Open Sans, sans-serif', zIndex: 20 }}>{formErrors.confirmPassword}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Submit Button - Show only if not verified */}
               {!isVerified && (
-                <div className="flex justify-center pt-6">
+                <div className="flex justify-center pt-4">
                   <button
+                    type="button"
+                    tabIndex={0}
+                    aria-disabled={false}
                     onClick={handleSubmit}
-                    disabled={!isPersonalInfoValid()}
                     style={{
-                      backgroundColor: isPersonalInfoValid() ? '#2B4C9A' : '#9ca3af',
+                      backgroundColor: '#2B4C9A',
                       color: '#ffffff',
-                      padding: '12px 48px',
-                      fontSize: '18px',
+                      padding: '10px 40px',
+                      fontSize: '16px',
                       fontWeight: '600',
                       fontFamily: 'Open Sans, sans-serif',
                       borderRadius: '8px',
                       border: 'none',
                       boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                      cursor: isPersonalInfoValid() ? 'pointer' : 'not-allowed',
-                      opacity: isPersonalInfoValid() ? 1 : 0.5,
+                      cursor: 'pointer',
+                      opacity: 1,
                       transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (isPersonalInfoValid()) {
-                        e.currentTarget.style.backgroundColor = '#1c3a7a';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (isPersonalInfoValid()) {
-                        e.currentTarget.style.backgroundColor = '#2B4C9A';
-                      }
                     }}
                   >
                     SUBMIT
@@ -726,22 +843,22 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                 Additional Information
               </h2>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Reason For Visit, Pregnancy Status, Additional Services Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Reason For Visit *</label>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Reason For Visit <span style={{color:'#dc2626'}}>*</span></label>
                     <Input
                       value={additionalInfo.reasonForVisit}
                       onChange={(e) => handleAdditionalInfoChange("reasonForVisit", e.target.value)}
                       placeholder="Weight Loss"
-                      className="h-12"
+                      className="h-10"
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Are you currently pregnant? *</label>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', height: '48px' }}>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Are you currently pregnant? <span style={{color:'#dc2626'}}>*</span></label>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', height: '40px' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <input
                           type="radio"
@@ -779,8 +896,8 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Additional Services</label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '48px' }}>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Additional Services</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '40px' }}>
                       <input
                         type="checkbox"
                         checked={additionalInfo.needExcuseLetter}
@@ -796,14 +913,14 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                 {additionalInfo.needExcuseLetter && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Absence Since</label>
-                    <Popover>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Absence Since</label>
+                      <Popover open={absencePopoverOpen} onOpenChange={setAbsencePopoverOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
                           style={{
                             width: '100%',
-                            height: '48px',
+                            height: '40px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
@@ -850,14 +967,14 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Return On</label>
-                    <Popover>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Return On</label>
+                    <Popover open={returnPopoverOpen} onOpenChange={setReturnPopoverOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
                           style={{
                             width: '100%',
-                            height: '48px',
+                            height: '40px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
@@ -907,13 +1024,13 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
 
                 {/* Pharmacy Detail Section */}
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Pharmacy Detail</label>
+                  <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Pharmacy Detail</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <Input
                       value={additionalInfo.pharmacyDetail}
                       onChange={(e) => handleAdditionalInfoChange("pharmacyDetail", e.target.value)}
                       placeholder=""
-                      className="h-12"
+                      className="h-10"
                       readOnly
                       style={{ flex: 1, backgroundColor: '#ffffff', cursor: 'pointer',borderRadius:'6px' }}
                       onClick={() => setShowPharmacyModal(true)}
@@ -949,11 +1066,11 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                 {/* Describe Details and Known Allergies Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Describe Details *</label>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Describe Details <span style={{color:'#dc2626'}}>*</span></label>
                     <textarea
                       value={additionalInfo.describeDetails}
                       onChange={(e) => handleAdditionalInfoChange("describeDetails", e.target.value)}
-                      placeholder="000"
+                      placeholder="Enter the Details in brief..."
                       style={{
                         width: '100%',
                         minHeight: '120px',
@@ -979,15 +1096,15 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>Known Allergies</label>
+                    <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>Known Allergies</label>
                     <textarea
                       value={additionalInfo.knownAllergies}
                       onChange={(e) => handleAdditionalInfoChange("knownAllergies", e.target.value)}
                       placeholder=""
                       style={{
                         width: '100%',
-                        minHeight: '120px',
-                        padding: '12px',
+                        minHeight: '80px',
+                        padding: '8px',
                         fontFamily: 'Open Sans, sans-serif',
                         fontSize: '14px',
                         backgroundColor: '#ffffff',
