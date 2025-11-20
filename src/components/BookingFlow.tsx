@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Step1LocationNew } from "./booking/Step1LocationNew";
 import { Step2PersonalInfo } from "./booking/Step2PersonalInfo";
 import { Step3Payment } from "./booking/Step3Payment";
-import { Step4VisitReason } from "./booking/Step4VisitReason";
 
 interface BookingFlowProps {
   onComplete?: () => void;
@@ -17,9 +16,12 @@ export function BookingFlow({ onComplete }: BookingFlowProps) {
   };
 
   const handleNext = () => {
-    if (currentStep < 4) {
+    // If less than final step, move to next, otherwise handle submit
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      handleSubmit();
     }
   };
 
@@ -64,14 +66,7 @@ export function BookingFlow({ onComplete }: BookingFlowProps) {
             updateFormData={updateFormData}
           />
         )}
-        {currentStep === 4 && (
-          <Step4VisitReason
-            onSubmit={handleSubmit}
-            onBack={handleBack}
-            formData={formData}
-            updateFormData={updateFormData}
-          />
-        )}
+        {/* Removed Step 4; Step 3 now acts as final submission page */}
       </div>
     </div>
   );

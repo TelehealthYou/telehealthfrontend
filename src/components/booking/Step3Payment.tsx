@@ -13,6 +13,7 @@ interface Step3PaymentProps {
 
 export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3PaymentProps) {
   const [paymentInfo, setPaymentInfo] = useState({
+    nameOnCard: formData.nameOnCard || "",
     cardNumber: formData.cardNumber || "",
     expiration: formData.expiration || "",
     cvv: formData.cvv || "",
@@ -24,7 +25,10 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
     subscribeRefills: formData.subscribeRefills || false,
     subscribeFollowUp: formData.subscribeFollowUp || false,
     couponCode: formData.couponCode || "",
-    agreeToTerms: formData.agreeToTerms || false
+    agreeToTerms: formData.agreeToTerms || false,
+    agreeFollowUp: formData.agreeFollowUp || false,
+    certifyAccuracy: formData.certifyAccuracy || false,
+    savePaymentMethod: formData.savePaymentMethod || false
   });
 
   const [selectedState, setSelectedState] = useState<any>(
@@ -163,6 +167,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
 
   const isFormValid = () => {
     return (
+      paymentInfo.nameOnCard &&
       paymentInfo.cardNumber &&
       paymentInfo.expiration &&
       paymentInfo.cvv &&
@@ -170,7 +175,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
       paymentInfo.city &&
       paymentInfo.state &&
       paymentInfo.zip &&
-      paymentInfo.agreeToTerms
+      paymentInfo.agreeToTerms &&
+      paymentInfo.agreeFollowUp &&
+      paymentInfo.certifyAccuracy
     );
   };
 
@@ -323,17 +330,73 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <CreditCard style={{ color: '#2B4C9A' }} size={24} />
               <h3 style={{ 
-                fontFamily: 'Open Sans, sans-serif', 
-                fontSize: '20px', 
-                fontWeight: '600', 
-                color: '#1f2937',
-                margin: 0
-              }}>
-                Card Details
-              </h3>
+                  fontFamily: 'Open Sans, sans-serif', 
+                  fontSize: '22px', 
+                  fontWeight: '700', 
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Enter Payment Method
+                </h3>
+            
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
+                  Name as appear on the card
+                </label>
+                <Input
+                  value={paymentInfo.nameOnCard}
+                  onChange={(e) => handleChange("nameOnCard", e.target.value)}
+                  placeholder="Name as appear on the card"
+                  className="h-12"
+                  style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', width: '100%' }}
+                />
+              </div>
             </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '24px', marginBottom: '32px' }}>
+          {/* Summary Column */}
+          <div style={{ backgroundColor: 'rgba(255,255,255,0.9)', padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+            <h3 style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '28px', fontWeight: '700', color: '#1f2937', marginTop: 0 }}>Summary</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600 }}>Primary Care</span>
+                <span style={{ fontWeight: 600 }}>$ 50.00</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600 }}>Subscription</span>
+                <span style={{ fontWeight: 600 }}>$ 50.00</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                <span style={{ fontWeight: 700 }}>Sub Total</span>
+                <span style={{ fontWeight: 700 }}>$ 100.00</span>
+              </div>
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ fontWeight: 600 }}>Discount Code</label>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <Input
+                    value={paymentInfo.couponCode}
+                    onChange={(e) => handleChange("couponCode", e.target.value)}
+                    placeholder="WELCOME"
+                    className="h-12"
+                    style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif', flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    style={{ backgroundColor: '#ffffff', color: '#2B4C9A', padding: '0 24px', fontSize: '16px', fontWeight: '600', borderRadius: '6px', border: '1px solid #2B4C9A', cursor: 'pointer' }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                <span style={{ fontWeight: 600 }}>Due Total</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ textDecoration: 'line-through', color: '#ef4444' }}>$ 100.00</span>
+                  <span style={{ fontWeight: 700, color: '#111827' }}>$ 95.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* Card Number */}
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
@@ -479,19 +542,31 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
             }}>
               Billing Address
             </h3>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={paymentInfo.useHomeAddress}
-                onChange={(e) => handleChange("useHomeAddress", e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
-              />
-              <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937' }}>Use Home Address</span>
-            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={paymentInfo.savePaymentMethod}
+                  onChange={(e) => handleChange("savePaymentMethod", e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
+                />
+                <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#1f2937' }}>Save and use this payment method for future payments</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={paymentInfo.useHomeAddress}
+                  onChange={(e) => handleChange("useHomeAddress", e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '4px' }}
+                />
+                <span style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#ef4444' }}>Mailing address same as home address (Collapse if address is different)</span>
+              </label>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             {/* Street Address */}
+            {!paymentInfo.useHomeAddress && (
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
                 Street Address *
@@ -504,8 +579,10 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
               />
             </div>
+            )}
 
             {/* City */}
+            {!paymentInfo.useHomeAddress && (
             <div>
               <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
                 City *
@@ -518,8 +595,10 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
               />
             </div>
+            )}
 
             {/* State */}
+            {!paymentInfo.useHomeAddress && (
             <div>
               <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
                 State *
@@ -533,8 +612,10 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 isSearchable={true}
               />
             </div>
+            )}
 
             {/* ZIP */}
+            {!paymentInfo.useHomeAddress && (
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
                 ZIP Code *
@@ -548,6 +629,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 style={{ borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
               />
             </div>
+            )}
           </div>
         </div>
 
@@ -599,45 +681,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
           </div>
         </div>
 
-        {/* Coupon Code */}
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
-          <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
-            Coupon Code (Optional)
-          </label>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <Input
-              value={paymentInfo.couponCode}
-              onChange={(e) => handleChange("couponCode", e.target.value)}
-              placeholder="Enter coupon code"
-              className="h-12"
-              style={{ flex: 1, borderRadius: '6px', border: '1px solid #d1d5db', fontFamily: 'Open Sans, sans-serif' }}
-            />
-            <button
-              type="button"
-              style={{
-                backgroundColor: '#ffffff',
-                color: '#2B4C9A',
-                padding: '0 24px',
-                fontSize: '16px',
-                fontWeight: '600',
-                fontFamily: 'Open Sans, sans-serif',
-                borderRadius: '6px',
-                border: '1px solid #2B4C9A',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f3f4f6';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#ffffff';
-              }}
-            >
-              Apply
-            </button>
-          </div>
-        </div>
+        {/* Coupon Code moved to Summary */}
 
         {/* Terms Agreement */}
         <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
@@ -662,8 +706,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
 
       {/* Navigation Buttons */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
+        display: 'grid',
+        gridTemplateColumns: '200px 1fr 200px',
+        alignItems: 'center',
         paddingTop: '28px',
         paddingBottom: '48px'
       }}>
@@ -699,7 +744,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
           BACK
         </button>
 
-        {/* Complete Payment Button */}
+        {/* Submit Button (center) */}
+        <div></div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
         <button
           onClick={handleNext}
           disabled={!isFormValid()}
@@ -731,11 +778,13 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
             }
           }}
         >
-          COMPLETE PAYMENT
+          Submit
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
+        </div>
+        <div></div>
       </div>
         </div>
       </div>
