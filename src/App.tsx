@@ -24,7 +24,7 @@ export default function App() {
     <div className="min-h-screen bg-white">
       <Toaster position="top-right" />
       
-      <Navigation onBookAppointment={handleBookAppointment} />
+      {!showBookingFlow && <Navigation onBookAppointment={handleBookAppointment} />}
       
       {!showBookingFlow && (
         <>
@@ -38,7 +38,7 @@ export default function App() {
         </>
       )}
       
-      <Footer />
+      {!showBookingFlow && <Footer />}
     </div>
   );
 }
