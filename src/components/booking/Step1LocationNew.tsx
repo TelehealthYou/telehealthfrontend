@@ -106,6 +106,33 @@ const doctors = [
   }
 ];
 
+// Ensure every TIME_SLOTS entry has at least one doctor assigned.
+// We create a copy of the doctors array and, if any time slot is missing,
+// assign it to the doctor with the fewest assigned times.
+const doctorsWithCoverage = (() => {
+  // deep copy
+  const copy = doctors.map(d => ({ ...d, availableTimes: Array.from(d.availableTimes) }));
+
+  for (const slot of TIME_SLOTS) {
+    const has = copy.some(d => d.availableTimes.includes(slot));
+    if (!has) {
+      // find doctor with fewest slots
+      let minIndex = 0;
+      for (let i = 1; i < copy.length; i++) {
+        if (copy[i].availableTimes.length < copy[minIndex].availableTimes.length) minIndex = i;
+      }
+      copy[minIndex].availableTimes.push(slot);
+    }
+  }
+
+  // Optional: sort each doctor's availableTimes to match TIME_SLOTS order
+  for (const d of copy) {
+    d.availableTimes.sort((a, b) => TIME_SLOTS.indexOf(a) - TIME_SLOTS.indexOf(b));
+  }
+
+  return copy;
+})();
+
 const services = [
   {
     name: "Primary Care",
@@ -170,7 +197,7 @@ const services = [
 ];
 
 export function Step1LocationNew({ onNext, formData, updateFormData }: Step1LocationProps) {
-  const [date, setDate] = useState<Date | undefined>(formData.date);
+  const [date, setDate] = useState<Date | undefined>(formData.date || new Date());
   const [location, setLocation] = useState(formData.location || "");
   const [selectedService, setSelectedService] = useState(formData.service || "");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(formData.timeSlot || "");
@@ -211,18 +238,77 @@ export function Step1LocationNew({ onNext, formData, updateFormData }: Step1Loca
     }
   };
 
+  // Helper: disable time slots that are in the past for today, and disable whole past dates
+  const isTimeDisabled = (time: string) => {
+    if (!date) return false;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    // If selected date is in the future -> all times enabled
+    if (selectedDate > today) return false;
+    // If selected date is in the past -> disable everything (shouldn't be selectable)
+    if (selectedDate < today) return true;
+    // Selected date is today -> disable slots that are earlier than or equal to now
+    const [timeStr, ampm] = time.split(' ');
+    const [hoursStr, minutesStr] = timeStr.split(':');
+    let hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10);
+    if (ampm === 'PM' && hours !== 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    const slotTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+    return slotTime <= now;
+  };
+
+  // Find the nearest future time slot (for today) that has at least one available doctor
+  const findNearestAvailableSlot = (targetDate: Date | undefined) => {
+    if (!targetDate) return null;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const selectedDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    // Only consider 'nearest' for today; for future dates, don't auto-select
+    if (selectedDate.getTime() !== today.getTime()) return null;
+
+    for (const time of TIME_SLOTS) {
+      if (isTimeDisabled(time)) continue; // skip past or disabled slots
+      // Check if there is at least one doctor available at this slot
+      const docs = doctorsWithCoverage.filter((d) => d.availableTimes.includes(time));
+      if (docs.length > 0) return time;
+    }
+    // Fallback: if no doctor has an available slot, still pick the first non-disabled time
+    for (const time of TIME_SLOTS) {
+      if (!isTimeDisabled(time)) return time;
+    }
+    return null;
+  };
+
+  // Auto-select nearest available slot when date or selectedService changes and no slot is chosen
+  useEffect(() => {
+    if (!date) return;
+    if (selectedTimeSlot) return; // don't override user's selection
+    const nearest = findNearestAvailableSlot(date);
+    if (nearest) {
+      setSelectedTimeSlot(nearest);
+    }
+  }, [date, selectedService]);
+
   const handleServiceSelect = (serviceName: string) => {
     setSelectedService(serviceName);
     // Reset subsequent selections when service changes
-    setDate(undefined);
-    setSelectedTimeSlot("");
+    // keep today's date selected by default (or previously chosen date in formData)
+    const newDate = formData?.date || new Date();
+    setDate(newDate);
+    // auto-select nearest available slot for today (if any)
+    const nearest = findNearestAvailableSlot(newDate);
+    setSelectedTimeSlot(nearest || "");
     setSelectedDoctor(null);
   };
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
     // Reset time and doctor when date changes
-    setSelectedTimeSlot("");
+    // auto-select nearest available slot for today; otherwise clear
+    const nearest = findNearestAvailableSlot(selectedDate);
+    setSelectedTimeSlot(nearest || "");
     setSelectedDoctor(null);
   };
 
@@ -232,9 +318,9 @@ export function Step1LocationNew({ onNext, formData, updateFormData }: Step1Loca
     setSelectedDoctor(null);
   };
 
-  // Filter doctors based on selected time slot
+  // Filter doctors based on selected time slot (use augmented list to guarantee coverage)
   const availableDoctors = selectedTimeSlot
-    ? doctors.filter(doctor => doctor.availableTimes.includes(selectedTimeSlot))
+    ? doctorsWithCoverage.filter(doctor => doctor.availableTimes.includes(selectedTimeSlot))
     : [];
 
   const handleNext = () => {
@@ -616,7 +702,13 @@ export function Step1LocationNew({ onNext, formData, updateFormData }: Step1Loca
                         borderRadius: '6px',
                         width: '100%'
                       }}
-                      disabled={(date) => date < new Date()}
+                      // Disable dates strictly before today (allow today)
+                      disabled={(d) => {
+                        const now = new Date();
+                        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const candidate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                        return candidate < todayMidnight;
+                      }}
                       modifiers={{
                         selected: date ? [date] : []
                       }}
@@ -698,9 +790,10 @@ export function Step1LocationNew({ onNext, formData, updateFormData }: Step1Loca
                     gap: '24px',
                     height: '100%'
                   }}>
-                    {TIME_SLOTS.slice(0, 21).map((time) => (
+                    {TIME_SLOTS.map((time) => (
                       <button
                         key={time}
+                        disabled={isTimeDisabled(time)}
                         onClick={() => handleTimeSlotSelect(time)}
                         style={{
                           padding: '14px 16px',
@@ -709,23 +802,24 @@ export function Step1LocationNew({ onNext, formData, updateFormData }: Step1Loca
                           fontFamily: 'Lora, serif',
                           borderRadius: '8px',
                           border: '2px solid #2b4c9a',
-                          backgroundColor: selectedTimeSlot === time ? '#2B4C9A' : '#ffffff',
-                          color: selectedTimeSlot === time ? '#ffffff' : '#1f2937',
-                          cursor: 'pointer',
+                          backgroundColor: selectedTimeSlot === time ? '#2B4C9A' : isTimeDisabled(time) ? '#f3f4f6' : '#ffffff',
+                          color: selectedTimeSlot === time ? '#ffffff' : isTimeDisabled(time) ? '#9ca3af' : '#1f2937',
+                          cursor: isTimeDisabled(time) ? 'not-allowed' : 'pointer',
                           transition: 'all 0.2s',
                           boxShadow: selectedTimeSlot === time
                             ? '0 4px 6px rgba(43, 76, 154, 0.3)'
                             : '0 1px 3px rgba(0,0,0,0.1)',
-                          transform: selectedTimeSlot === time ? 'translateY(-2px)' : 'translateY(0)'
+                          transform: selectedTimeSlot === time ? 'translateY(-2px)' : 'translateY(0)',
+                          opacity: isTimeDisabled(time) ? 0.5 : 1
                         }}
                         onMouseEnter={(e) => {
-                          if (selectedTimeSlot !== time) {
+                          if (!isTimeDisabled(time) && selectedTimeSlot !== time) {
                             e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.15)';
                             e.currentTarget.style.transform = 'translateY(-1px)';
                           }
                         }}
                         onMouseLeave={(e) => {
-                          if (selectedTimeSlot !== time) {
+                          if (!isTimeDisabled(time) && selectedTimeSlot !== time) {
                             e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
                             e.currentTarget.style.transform = 'translateY(0)';
                           }
