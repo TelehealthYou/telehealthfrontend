@@ -1,4 +1,4 @@
-import { Phone, Mail, Facebook, Twitter, Instagram, Linkedin, ArrowRight } from "lucide-react";
+import { Phone, Mail, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 export function Footer() {
