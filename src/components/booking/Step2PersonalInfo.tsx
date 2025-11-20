@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import Select from "react-select";
 
 interface Step2PersonalInfoProps {
-  onNext: () => void;
+  onNext: (data?: any) => void;
   onBack: () => void;
   formData: any;
   updateFormData: (data: any) => void;
@@ -220,8 +220,9 @@ export function Step2PersonalInfo({ onNext, onBack, formData, updateFormData }: 
   };
 
   const handleNext = () => {
-    updateFormData({ ...personalInfo, ...additionalInfo });
-    onNext();
+    const update = { ...personalInfo, ...additionalInfo };
+    updateFormData(update);
+    onNext(update);
   };
 
   const isPersonalInfoValid = () => {

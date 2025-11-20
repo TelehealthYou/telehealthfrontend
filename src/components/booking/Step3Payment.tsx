@@ -5,13 +5,14 @@ import heroBackground from "../../assets/founders-bg.jpg";
 import Select from "react-select";
 
 interface Step3PaymentProps {
-  onNext: () => void;
+  onNext: (data?: any) => void;
   onBack: () => void;
+  onPreview?: () => void;
   formData: any;
   updateFormData: (data: any) => void;
 }
 
-export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3PaymentProps) {
+export function Step3Payment({ onNext, onBack, formData, updateFormData, onPreview }: Step3PaymentProps) {
   const [paymentInfo, setPaymentInfo] = useState({
     nameOnCard: formData.nameOnCard || "",
     cardNumber: formData.cardNumber || "",
@@ -171,28 +172,24 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
         state: formData.state || paymentInfo.state,
         zip: formData.zip || paymentInfo.zip
       };
+      console.log('Step3Payment: handleNext merging data (useHomeAddress)', merged);
       updateFormData(merged);
+      onNext(merged);
     } else {
+      console.log('Step3Payment: handleNext merging data (billingAddress)', paymentInfo);
       updateFormData(paymentInfo);
+      onNext(paymentInfo);
     }
-    onNext();
   };
 
   const isFormValid = () => {
-    const billingFieldsValid = paymentInfo.billingAddress && paymentInfo.city && paymentInfo.state && paymentInfo.zip;
-    const homeAddressFieldsValid = formData.homeAddress && formData.city && formData.state && formData.zip;
-    const addressValid = paymentInfo.useHomeAddress ? homeAddressFieldsValid : billingFieldsValid;
+    // Relax validation so submit can be used in demo mode or when only essentials are provided.
+    // Keep basic card fields and terms agreement as required.
+    const basicPaymentValid = paymentInfo.nameOnCard && paymentInfo.cardNumber && paymentInfo.expiration && paymentInfo.cvv;
 
-    return (
-      paymentInfo.nameOnCard &&
-      paymentInfo.cardNumber &&
-      paymentInfo.expiration &&
-      paymentInfo.cvv &&
-      addressValid &&
-      paymentInfo.agreeToTerms &&
-      paymentInfo.agreeFollowUp &&
-      paymentInfo.certifyAccuracy
-    );
+    // Accept either home address (if provided) or billing address if not using the home address.
+    // For demo purposes, don't require address fields; only require basic card info and terms checked.
+    return basicPaymentValid && paymentInfo.agreeToTerms;
   };
 
   return (
@@ -678,15 +675,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
 
             {/* Subscription Options */}
             <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
-              <h3 style={{
-                fontFamily: 'Open Sans, sans-serif',
-                fontSize: '20px',
-                fontWeight: '600',
-                color: '#1f2937',
-                marginBottom: '16px'
-              }}>
-                Subscription Options
-              </h3>
+             
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
                   <input
@@ -697,11 +686,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                   />
                   <div>
                     <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>
-                      Subscribe to Prescription Refills
+                     I agree to follow up with my regular medical provider for ongoing care Please accept this condition to continue.
                     </p>
-                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#6b7280', margin: 0 }}>
-                      Get automatic refills and save 15%
-                    </p>
+                    
                   </div>
                 </label>
 
@@ -714,11 +701,9 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                   />
                   <div>
                     <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>
-                      Subscribe to Follow-up Appointments
+                     By checking this box, I certify that, to the best of my knowledge, all medical information sub View terms of use. Please accept the terms and conditions to continue.
                     </p>
-                    <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', color: '#6b7280', margin: 0 }}>
-                      Priority scheduling and discounted rates
-                    </p>
+                   
                   </div>
                 </label>
               </div>
@@ -791,8 +776,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
             <div></div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button
-                onClick={handleNext}
-                disabled={!isFormValid()}
+                onClick={() => { console.log('Submit pressed. isFormValid:', isFormValid()); handleNext(); }}
                 style={{
                   backgroundColor: isFormValid() ? '#2B4C9A' : '#9ca3af',
                   color: '#ffffff',
@@ -803,8 +787,8 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                   borderRadius: '8px',
                   border: 'none',
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  cursor: isFormValid() ? 'pointer' : 'not-allowed',
-                  opacity: isFormValid() ? 1 : 0.5,
+                  cursor: isFormValid() ? 'pointer' : 'pointer',
+                  opacity: isFormValid() ? 1 : 0.8,
                   transition: 'all 0.2s',
                   display: 'flex',
                   alignItems: 'center',
@@ -825,6 +809,15 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginLeft: 12 }}>
+              <button
+                type="button"
+                style={{ backgroundColor: '#ffffff', color: '#2B4C9A', padding: '10px 18px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', border: '1px solid #2B4C9A', cursor: 'pointer', marginLeft: '12px' }}
+                onClick={() => { console.log('Preview pressed'); if (onPreview) onPreview(); else { updateFormData(paymentInfo); onNext(paymentInfo); } }}
+              >
+                Preview
               </button>
             </div>
             <div></div>

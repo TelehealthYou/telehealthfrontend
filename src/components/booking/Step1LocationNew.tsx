@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 interface Step1LocationProps {
-  onNext: () => void;
+  onNext: (data?: any) => void;
   formData: any;
   updateFormData: (data: any) => void;
 }
@@ -239,14 +239,15 @@ export function Step1LocationNew({ onNext, formData, updateFormData }: Step1Loca
 
   const handleNext = () => {
     if (date && location && selectedService && selectedTimeSlot && selectedDoctor) {
-      updateFormData({
+      const update = {
         date,
         location,
         service: selectedService,
         timeSlot: selectedTimeSlot,
         doctorId: selectedDoctor
-      });
-      onNext();
+      };
+      updateFormData(update);
+      onNext(update);
     }
   };
 
