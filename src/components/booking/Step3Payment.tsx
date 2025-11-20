@@ -518,23 +518,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                   </div>
                 </div>
               </div>
-              {/* If mailing address uses home address but home address is missing, show guidance */}
-              {paymentInfo.useHomeAddress && (!formData.homeAddress || !formData.city || !formData.state || !formData.zip) && (
-                <div style={{ marginTop: '12px' }}>
-                  <p style={{ color: '#ef4444', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', margin: 0 }}>
-                    Home address is required — please complete your Home Address in the Contact Info step or uncheck the box to provide a different billing address.
-                  </p>
-                </div>
-              )}
-
-              {paymentInfo.useHomeAddress && formData.homeAddress && (
-                <div style={{ marginTop: '12px' }}>
-                  <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', margin: 0 }}>
-                    <strong>Home Address:</strong> {formData.homeAddress}, {formData.city}, {formData.state} {formData.zip}
-                  </p>
-                </div>
-              )}
-
+              
               {/* Expiration */}
               <div>
                 <label style={{ display: 'block', fontFamily: 'Open Sans, sans-serif', fontSize: '16px', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
@@ -567,9 +551,28 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
               </div>
             </div>
 
+            {/* If mailing address uses home address but home address is missing, show guidance */}
+              {paymentInfo.useHomeAddress && (!formData.homeAddress || !formData.city || !formData.state || !formData.zip) && (
+                <div style={{ marginTop: '12px' }}>
+                  <p style={{ color: '#ef4444', fontFamily: 'Open Sans, sans-serif', fontSize: '14px', margin: 0 }}>
+                    Home address is required — please complete your Home Address in the Contact Info step or uncheck the box to provide a different billing address.
+                  </p>
+                </div>
+              )}
+
+              {paymentInfo.useHomeAddress && formData.homeAddress && (
+                <div style={{ marginTop: '12px' }}>
+                  <p style={{ fontFamily: 'Open Sans, sans-serif', fontSize: '14px', margin: 0 }}>
+                    <strong>Home Address:</strong> {formData.homeAddress}, {formData.city}, {formData.state} {formData.zip}
+                  </p>
+                </div>
+              )}
+
+
             {/* Billing Address */}
             <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                {!paymentInfo.useHomeAddress && (
                 <h3 style={{
                   fontFamily: 'Open Sans, sans-serif',
                   fontSize: '20px',
@@ -579,6 +582,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 }}>
                   Billing Address
                 </h3>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <input
@@ -601,6 +605,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                 </div>
               </div>
 
+              {!paymentInfo.useHomeAddress && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 {/* Street Address */}
                 {!paymentInfo.useHomeAddress && (
@@ -668,6 +673,7 @@ export function Step3Payment({ onNext, onBack, formData, updateFormData }: Step3
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             {/* Subscription Options */}
